@@ -4,7 +4,9 @@ from mongoengine.errors import NotUniqueError
 
 from apps.products.models import Product, Category
 
-
+from apps.products.repositories.product_repository import (
+    ProductRepository,
+)
 class ProductService:
 
     @staticmethod
@@ -74,6 +76,40 @@ class ProductService:
             raise ValueError(
                 f"Product with SKU '{sku}' already exists "
                 "in this organization."
+            )
+
+        return product
+
+    @staticmethod
+    def get_product(*, organization, product_id):
+        """
+        Retrieve a product belonging to an organization.
+        """
+
+        product = ProductRepository.get_by_id(
+            organization=organization,
+            product_id=product_id,
+        )
+
+        if not product:
+            raise ValueError("Product not found.")
+
+        return product
+
+    @staticmethod
+    def get_product_by_sku(*, organization, sku):
+        """
+        Retrieve a product by SKU.
+        """
+
+        product = ProductRepository.get_by_sku(
+            organization=organization,
+            sku=sku,
+        )
+
+        if not product:
+            raise ValueError(
+                f"Product with SKU '{sku}' was not found."
             )
 
         return product

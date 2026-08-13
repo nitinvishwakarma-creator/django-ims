@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'apps.accounts.apps.AccountsConfig',
     'apps.organizations.apps.OrganizationsConfig',
     'apps.authorization.apps.AuthorizationConfig',
+    'apps.products'
 ]
 
 MIDDLEWARE = [

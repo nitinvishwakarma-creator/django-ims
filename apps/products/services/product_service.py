@@ -113,3 +113,126 @@ class ProductService:
             )
 
         return product
+
+    @staticmethod
+    def update_product(
+        *,
+        organization,
+        product_id,
+        name=None,
+        description=None,
+        category=None,
+        brand=None,
+        unit=None,
+        cost_price=None,
+        selling_price=None,
+        barcode=None,
+    ):
+        """
+        Update product information.
+        """
+
+        product = ProductRepository.get_by_id(
+            organization=organization,
+            product_id=product_id,
+        )
+
+        if not product:
+            raise ValueError("Product not found.")
+
+        if name is not None:
+            if not name.strip():
+                raise ValueError("Product name cannot be empty.")
+
+            product.name = name.strip()
+
+        if description is not None:
+            product.description = description
+
+        if category is not None:
+
+            if category.organization.id != organization.id:
+                raise ValueError(
+                    "Category does not belong to this organization."
+                )
+
+            product.category = category
+
+        if brand is not None:
+            product.brand = brand
+
+        if unit is not None:
+            product.unit = unit
+
+        if cost_price is not None:
+
+            cost_price = Decimal(str(cost_price))
+
+            if cost_price < 0:
+                raise ValueError(
+                    "Cost price cannot be negative."
+                )
+
+            product.cost_price = cost_price
+
+        if selling_price is not None:
+
+            selling_price = Decimal(str(selling_price))
+
+            if selling_price < 0:
+                raise ValueError(
+                    "Selling price cannot be negative."
+                )
+
+            product.selling_price = selling_price
+
+        if barcode is not None:
+            product.barcode = barcode
+
+        product.save()
+
+        return product
+
+    @staticmethod
+    def deactivate_product(*, organization, product_id):
+        """
+        Deactivate a product without deleting it.
+        """
+
+        product = ProductRepository.get_by_id(
+            organization=organization,
+            product_id=product_id,
+        )
+
+        if not product:
+            raise ValueError("Product not found.")
+
+        if not product.is_active:
+            raise ValueError("Product is already inactive.")
+
+        product.is_active = False
+        product.save()
+
+        return product
+
+    @staticmethod
+    def activate_product(*, organization, product_id):
+        """
+        Reactivate a previously deactivated product.
+        """
+
+        product = ProductRepository.get_by_id(
+            organization=organization,
+            product_id=product_id,
+        )
+
+        if not product:
+            raise ValueError("Product not found.")
+
+        if product.is_active:
+            raise ValueError("Product is already active.")
+
+        product.is_active = True
+        product.save()
+
+        return product

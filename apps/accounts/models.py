@@ -27,7 +27,27 @@ class User(Document):
     updated_at = DateTimeField(default=datetime.utcnow)
 
     meta = {
-        "collection": "users"
+        "collection":
+            "users",
+
+        "indexes": [
+            "organization",
+            "role",
+
+            {
+                "fields": [
+                    "organization",
+                    "is_active",
+                ],
+            },
+
+            {
+                "fields": [
+                    "organization",
+                    "created_at",
+                ],
+            },
+        ],
     }
 
     def set_password(self, raw_password):
@@ -41,3 +61,20 @@ class User(Document):
             self,
             permission_code,
         )
+
+    @property
+    def is_authenticated(self):
+        return True
+
+
+    @property
+    def is_anonymous(self):
+        return False
+
+
+    def get_username(self):
+        return self.email
+
+
+    def get_session_auth_hash(self):
+        return self.password

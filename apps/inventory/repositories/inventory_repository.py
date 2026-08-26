@@ -1,7 +1,24 @@
-from apps.inventory.models import Inventory
+from datetime import datetime
+
+from mongoengine.errors import (
+    ValidationError,
+)
+
+from apps.inventory.models import (
+    Inventory,
+)
 
 
 class InventoryRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return Inventory.objects(
+            organization=organization,
+        )
 
     @staticmethod
     def get_by_id(
@@ -9,14 +26,26 @@ class InventoryRepository:
         organization,
         inventory_id,
     ):
-        """
-        Retrieve inventory by ID within an organization.
-        """
+        try:
 
-        return Inventory.objects(
-            organization=organization,
-            id=inventory_id,
-        ).first()
+            return (
+                InventoryRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=inventory_id,
+                )
+                .first()
+            )
+
+        except (
+            ValidationError,
+            TypeError,
+            ValueError,
+        ):
+
+            return None
 
     @staticmethod
     def get_by_product_and_warehouse(
@@ -25,31 +54,49 @@ class InventoryRepository:
         product,
         warehouse,
     ):
-        """
-        Retrieve inventory for a specific
-        product and warehouse.
-        """
+        return (
+            InventoryRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                product=product,
+                warehouse=warehouse,
+            )
+            .first()
+        )
 
-        return Inventory.objects(
-            organization=organization,
-            product=product,
-            warehouse=warehouse,
-        ).first()
+    @staticmethod
+    def exists_for_product_and_warehouse(
+        *,
+        organization,
+        product,
+        warehouse,
+    ):
+        return (
+            InventoryRepository
+            .get_by_product_and_warehouse(
+                organization=organization,
+                product=product,
+                warehouse=warehouse,
+            )
+            is not None
+        )
 
     @staticmethod
     def list_by_organization(
         *,
         organization,
     ):
-        """
-        Return all inventory belonging
-        to an organization.
-        """
-
-        return Inventory.objects(
-            organization=organization,
-        ).order_by(
-            "-updated_at"
+        return (
+            InventoryRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-updated_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -58,16 +105,18 @@ class InventoryRepository:
         organization,
         warehouse,
     ):
-        """
-        Return inventory belonging
-        to a specific warehouse.
-        """
-
-        return Inventory.objects(
-            organization=organization,
-            warehouse=warehouse,
-        ).order_by(
-            "-updated_at"
+        return (
+            InventoryRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                warehouse=warehouse,
+            )
+            .order_by(
+                "-updated_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -76,16 +125,18 @@ class InventoryRepository:
         organization,
         product,
     ):
-        """
-        Return inventory belonging
-        to a specific product.
-        """
-
-        return Inventory.objects(
-            organization=organization,
-            product=product,
-        ).order_by(
-            "-updated_at"
+        return (
+            InventoryRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                product=product,
+            )
+            .order_by(
+                "-updated_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -97,10 +148,6 @@ class InventoryRepository:
         quantity=0,
         reserved_quantity=0,
     ):
-        """
-        Create a new inventory record.
-        """
-
         inventory = Inventory(
             organization=organization,
             product=product,
@@ -119,11 +166,11 @@ class InventoryRepository:
         inventory,
         quantity,
     ):
-        """
-        Update inventory quantity.
-        """
-
         inventory.quantity = quantity
+        inventory.updated_at = (
+            datetime.utcnow()
+        )
+
         inventory.save()
 
         return inventory
@@ -134,14 +181,46 @@ class InventoryRepository:
         inventory,
         reserved_quantity,
     ):
-        """
-        Update reserved quantity.
-        """
-
         inventory.reserved_quantity = (
             reserved_quantity
+        )
+
+        inventory.updated_at = (
+            datetime.utcnow()
         )
 
         inventory.save()
 
         return inventory
+
+    @staticmethod
+    def update_balances(
+        *,
+        inventory,
+        quantity,
+        reserved_quantity,
+    ):
+        inventory.quantity = quantity
+        inventory.reserved_quantity = (
+            reserved_quantity
+        )
+
+        inventory.updated_at = (
+            datetime.utcnow()
+        )
+
+        inventory.save()
+
+        return inventory
+
+    @staticmethod
+    def delete_inventory(
+        *,
+        inventory,
+    ):
+        if not inventory:
+            return False
+
+        inventory.delete()
+
+        return True

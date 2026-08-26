@@ -766,6 +766,328 @@ class APIDiscoveryService:
                     "available",
             },
         }
+
+    @staticmethod
+    def get_warehouse_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/warehouses/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "warehouses.read",
+                    "POST":
+                        "warehouses.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "is_active":
+                        "boolean",
+                    "country":
+                        "string",
+                    "state":
+                        "string",
+                    "city":
+                        "string",
+                },
+                "create_fields": [
+                    "name",
+                    "code",
+                    "address",
+                    "city",
+                    "state",
+                    "country",
+                    "pincode",
+                ],
+                "required_create_fields": [
+                    "name",
+                    "code",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                    "PATCH",
+                ],
+                "path": (
+                    "/api/v1/warehouses/"
+                    "{warehouse_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "warehouses.read",
+                    "PATCH":
+                        "warehouses.update",
+                },
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "activate": {
+                "method":
+                    "POST",
+                "path": (
+                    "/api/v1/warehouses/"
+                    "{warehouse_id}/activate/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "warehouses.update",
+                "idempotent":
+                    True,
+                "status":
+                    "available",
+            },
+            "deactivate": {
+                "method":
+                    "POST",
+                "path": (
+                    "/api/v1/warehouses/"
+                    "{warehouse_id}/deactivate/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "warehouses.update",
+                "idempotent":
+                    True,
+                "hard_delete":
+                    False,
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_inventory_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/inventory/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "inventory.read",
+                    "POST":
+                        "inventory.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "product_id":
+                        "object_id",
+                    "warehouse_id":
+                        "object_id",
+                },
+                "create_fields": [
+                    "product_id",
+                    "warehouse_id",
+                    "quantity",
+                ],
+                "required_create_fields": [
+                    "product_id",
+                    "warehouse_id",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "method":
+                    "GET",
+                "path": (
+                    "/api/v1/inventory/"
+                    "{inventory_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "inventory.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "adjust": {
+                "method":
+                    "POST",
+                "path": (
+                    "/api/v1/inventory/"
+                    "{inventory_id}/adjust/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "inventory.adjust",
+                "fields": [
+                    "quantity_change",
+                    "reference_type",
+                    "reference_id",
+                    "notes",
+                ],
+                "creates_ledger_entry":
+                    True,
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_stock_movement_endpoints():
+        return {
+            "collection": {
+                "method":
+                    "GET",
+                "path":
+                    "/api/v1/stock-movements/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "inventory.read",
+                "immutable":
+                    True,
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": [
+                    "inventory_id",
+                    "product_id",
+                    "warehouse_id",
+                    "movement_type",
+                    "reference_type",
+                    "reference_id",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "method":
+                    "GET",
+                "path": (
+                    "/api/v1/stock-movements/"
+                    "{movement_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "inventory.read",
+                "immutable":
+                    True,
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_stock_transfer_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/stock-transfers/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "inventory.read",
+                    "POST":
+                        "inventory.transfer",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": [
+                    "product_id",
+                    "source_warehouse_id",
+                    "destination_warehouse_id",
+                    "status",
+                ],
+                "create_fields": [
+                    "product_id",
+                    "source_warehouse_id",
+                    "destination_warehouse_id",
+                    "quantity",
+                    "notes",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "method":
+                    "GET",
+                "path": (
+                    "/api/v1/stock-transfers/"
+                    "{transfer_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "inventory.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+        }
     @staticmethod
     def get_manifest():
         build_info = (
@@ -836,6 +1158,29 @@ class APIDiscoveryService:
                     (
                         APIDiscoveryService
                         .get_product_endpoints()
+                    ),
+                "warehouses":
+                    (
+                        APIDiscoveryService
+                        .get_warehouse_endpoints()
+                    ),
+
+                "inventory":
+                    (
+                        APIDiscoveryService
+                        .get_inventory_endpoints()
+                    ),
+
+                "stock_movements":
+                    (
+                        APIDiscoveryService
+                        .get_stock_movement_endpoints()
+                    ),
+
+                "stock_transfers":
+                    (
+                        APIDiscoveryService
+                        .get_stock_transfer_endpoints()
                     ),
             },
 

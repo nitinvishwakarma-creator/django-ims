@@ -1,3 +1,9 @@
+from bson import (
+    ObjectId,
+)
+from bson.errors import (
+    InvalidId,
+)
 class APIFilteringError(
     ValueError
 ):
@@ -155,6 +161,40 @@ class APIFilteringService:
         return parsed_value
 
     @staticmethod
+    def _parse_object_id(
+        value,
+        *,
+        parameter_name,
+    ):
+        value = str(
+            value
+            or
+            ""
+        ).strip()
+
+        try:
+
+            return ObjectId(
+                value
+            )
+
+        except (
+            InvalidId,
+            TypeError,
+            ValueError,
+        ) as exc:
+
+            raise APIFilteringError(
+                details={
+                    parameter_name: [
+                        (
+                            f"{parameter_name} must "
+                            "be a valid identifier."
+                        )
+                    ],
+                },
+            ) from exc
+    @staticmethod
     def _parse_csv(
         value,
         *,
@@ -273,6 +313,17 @@ class APIFilteringService:
                 )
             )
 
+        if parser == "object_id":
+
+            return (
+                APIFilteringService
+                ._parse_object_id(
+                    value,
+                    parameter_name=(
+                        parameter_name
+                    ),
+                )
+            )
         if parser == "csv":
 
             return (
@@ -291,6 +342,34 @@ class APIFilteringService:
                 f"parser: {parser}"
             )
         )
+
+    @staticmethod
+    def _serialize_applied_value(
+        value,
+    ):
+        if isinstance(
+            value,
+            ObjectId,
+        ):
+            return str(
+                value
+            )
+
+        if isinstance(
+            value,
+            list,
+        ):
+            return [
+                (
+                    APIFilteringService
+                    ._serialize_applied_value(
+                        item
+                    )
+                )
+                for item in value
+            ]
+
+        return value
 
     @staticmethod
     def apply(
@@ -485,7 +564,12 @@ class APIFilteringService:
 
             applied_filters[
                 parameter_name
-            ] = parsed_value
+            ] = (
+                APIFilteringService
+                ._serialize_applied_value(
+                    parsed_value
+                )
+            )
 
         if mongo_filters:
 

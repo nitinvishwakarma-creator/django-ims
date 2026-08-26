@@ -51,6 +51,13 @@ urlpatterns = [
             "apps.products.api.v1.urls"
         ),
     ),
+
+    path(
+        "",
+        include(
+            "apps.inventory.api.v1.urls"
+        ),
+    ),
 ]
 
 # ==================================================

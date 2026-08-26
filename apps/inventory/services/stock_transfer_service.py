@@ -15,7 +15,9 @@ from apps.inventory.repositories.stock_transfer_repository import (
 from apps.inventory.services.stock_movement_service import (
     StockMovementService,
 )
-
+from apps.inventory.repositories.stock_movement_repository import (
+    StockMovementRepository,
+)
 
 class StockTransferService:
 
@@ -208,7 +210,7 @@ class StockTransferService:
         # ---------------------------------------------
         # DESTINATION INVENTORY
         # ---------------------------------------------
-
+        destination_inventory_created = False
         destination_inventory = (
             InventoryRepository
             .get_by_product_and_warehouse(
@@ -229,6 +231,7 @@ class StockTransferService:
                         reserved_quantity=0,
                     )
                 )
+                destination_inventory_created = True
             except NotUniqueError:
                 destination_inventory = (
                     InventoryRepository
@@ -275,80 +278,210 @@ class StockTransferService:
         )
 
         # ---------------------------------------------
-        # UPDATE INVENTORY
+        # COMPENSATING TRANSACTION
         # ---------------------------------------------
 
-        source_inventory = (
-            InventoryRepository.update_quantity(
-                inventory=source_inventory,
-                quantity=source_quantity_after,
+        transfer = None
+        transfer_out_movement = None
+        transfer_in_movement = None
+
+        try:
+
+            source_inventory = (
+                InventoryRepository
+                .update_quantity(
+                    inventory=source_inventory,
+                    quantity=source_quantity_after,
+                )
             )
-        )
 
-        destination_inventory = (
-            InventoryRepository.update_quantity(
-                inventory=destination_inventory,
-                quantity=destination_quantity_after,
+            destination_inventory = (
+                InventoryRepository
+                .update_quantity(
+                    inventory=destination_inventory,
+                    quantity=(
+                        destination_quantity_after
+                    ),
+                )
             )
-        )
 
-        # ---------------------------------------------
-        # CREATE TRANSFER
-        # ---------------------------------------------
-
-        transfer = (
-            StockTransferRepository.create_transfer(
-                organization=organization,
-                transfer_number=transfer_number,
-                product=product,
-                source_warehouse=source_warehouse,
-                destination_warehouse=destination_warehouse,
-                source_inventory=source_inventory,
-                destination_inventory=destination_inventory,
-                quantity=quantity,
-                status="COMPLETED",
-                notes=notes,
-                created_by=user,
-                completed_at=datetime.utcnow(),
+            transfer = (
+                StockTransferRepository
+                .create_transfer(
+                    organization=organization,
+                    transfer_number=transfer_number,
+                    product=product,
+                    source_warehouse=(
+                        source_warehouse
+                    ),
+                    destination_warehouse=(
+                        destination_warehouse
+                    ),
+                    source_inventory=(
+                        source_inventory
+                    ),
+                    destination_inventory=(
+                        destination_inventory
+                    ),
+                    quantity=quantity,
+                    status="COMPLETED",
+                    notes=notes,
+                    created_by=user,
+                    completed_at=datetime.utcnow(),
+                )
             )
-        )
 
-        # ---------------------------------------------
-        # TRANSFER OUT MOVEMENT
-        # ---------------------------------------------
+            transfer_out_movement = (
+                StockMovementService
+                .create_movement(
+                    user=user,
+                    organization=organization,
+                    inventory=source_inventory,
+                    movement_type="TRANSFER_OUT",
+                    quantity=-quantity,
+                    quantity_before=(
+                        source_quantity_before
+                    ),
+                    quantity_after=(
+                        source_quantity_after
+                    ),
+                    reserved_before=(
+                        source_reserved_before
+                    ),
+                    reserved_after=(
+                        source_inventory
+                        .reserved_quantity
+                    ),
+                    reference_type=(
+                        "STOCK_TRANSFER"
+                    ),
+                    reference_id=(
+                        transfer_number
+                    ),
+                    notes=notes,
+                )
+            )
 
-        StockMovementService.create_movement(
-            user=user,
-            organization=organization,
-            inventory=source_inventory,
-            movement_type="TRANSFER_OUT",
-            quantity=-quantity,
-            quantity_before=source_quantity_before,
-            quantity_after=source_quantity_after,
-            reserved_before=source_reserved_before,
-            reserved_after=source_inventory.reserved_quantity,
-            reference_type="STOCK_TRANSFER",
-            reference_id=transfer_number,
-            notes=notes,
-        )
+            transfer_in_movement = (
+                StockMovementService
+                .create_movement(
+                    user=user,
+                    organization=organization,
+                    inventory=(
+                        destination_inventory
+                    ),
+                    movement_type="TRANSFER_IN",
+                    quantity=quantity,
+                    quantity_before=(
+                        destination_quantity_before
+                    ),
+                    quantity_after=(
+                        destination_quantity_after
+                    ),
+                    reserved_before=(
+                        destination_reserved_before
+                    ),
+                    reserved_after=(
+                        destination_inventory
+                        .reserved_quantity
+                    ),
+                    reference_type=(
+                        "STOCK_TRANSFER"
+                    ),
+                    reference_id=(
+                        transfer_number
+                    ),
+                    notes=notes,
+                )
+            )
 
-        # ---------------------------------------------
-        # TRANSFER IN MOVEMENT
-        # ---------------------------------------------
+        except Exception:
 
-        StockMovementService.create_movement(
-            user=user,
-            organization=organization,
-            inventory=destination_inventory,
-            movement_type="TRANSFER_IN",
-            quantity=quantity,
-            quantity_before=destination_quantity_before,
-            quantity_after=destination_quantity_after,
-            reserved_before=destination_reserved_before,
-            reserved_after=destination_inventory.reserved_quantity,
-            reference_type="STOCK_TRANSFER",
-            reference_id=transfer_number,
-            notes=notes,
-        )
+            # Remove any partially written
+            # movement documents.
+            try:
+                (
+                    StockMovementRepository
+                    .delete_movement(
+                        movement=(
+                            transfer_in_movement
+                        ),
+                    )
+                )
+            except Exception:
+                pass
+
+            try:
+                (
+                    StockMovementRepository
+                    .delete_movement(
+                        movement=(
+                            transfer_out_movement
+                        ),
+                    )
+                )
+            except Exception:
+                pass
+
+            # Remove an incomplete transfer.
+            try:
+                (
+                    StockTransferRepository
+                    .delete_transfer(
+                        transfer=transfer,
+                    )
+                )
+            except Exception:
+                pass
+
+            # Restore source inventory.
+            try:
+                (
+                    InventoryRepository
+                    .update_quantity(
+                        inventory=source_inventory,
+                        quantity=(
+                            source_quantity_before
+                        ),
+                    )
+                )
+            except Exception:
+                pass
+
+            # Restore an existing destination
+            # balance, or remove a balance created
+            # solely for the failed transfer.
+            if destination_inventory_created:
+
+                try:
+                    (
+                        InventoryRepository
+                        .delete_inventory(
+                            inventory=(
+                                destination_inventory
+                            ),
+                        )
+                    )
+                except Exception:
+                    pass
+
+            else:
+
+                try:
+                    (
+                        InventoryRepository
+                        .update_quantity(
+                            inventory=(
+                                destination_inventory
+                            ),
+                            quantity=(
+                                destination_quantity_before
+                            ),
+                        )
+                    )
+                except Exception:
+                    pass
+
+            raise
 
         return transfer

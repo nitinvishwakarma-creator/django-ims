@@ -1,7 +1,22 @@
-from apps.inventory.models import StockTransfer
+from mongoengine.errors import (
+    ValidationError,
+)
+
+from apps.inventory.models import (
+    StockTransfer,
+)
 
 
 class StockTransferRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return StockTransfer.objects(
+            organization=organization,
+        )
 
     @staticmethod
     def create_transfer(
@@ -19,10 +34,6 @@ class StockTransferRepository:
         created_by,
         completed_at=None,
     ):
-        """
-        Create a stock transfer record.
-        """
-
         transfer = StockTransfer(
             organization=organization,
             transfer_number=transfer_number,
@@ -48,10 +59,26 @@ class StockTransferRepository:
         organization,
         transfer_id,
     ):
-        return StockTransfer.objects(
-            organization=organization,
-            id=transfer_id,
-        ).first()
+        try:
+
+            return (
+                StockTransferRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=transfer_id,
+                )
+                .first()
+            )
+
+        except (
+            ValidationError,
+            TypeError,
+            ValueError,
+        ):
+
+            return None
 
     @staticmethod
     def get_by_transfer_number(
@@ -59,19 +86,32 @@ class StockTransferRepository:
         organization,
         transfer_number,
     ):
-        return StockTransfer.objects(
-            organization=organization,
-            transfer_number=transfer_number,
-        ).first()
+        return (
+            StockTransferRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                transfer_number=transfer_number,
+            )
+            .first()
+        )
 
     @staticmethod
     def list_by_organization(
         *,
         organization,
     ):
-        return StockTransfer.objects(
-            organization=organization,
-        ).order_by("-created_at")
+        return (
+            StockTransferRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
 
     @staticmethod
     def list_by_product(
@@ -79,10 +119,19 @@ class StockTransferRepository:
         organization,
         product,
     ):
-        return StockTransfer.objects(
-            organization=organization,
-            product=product,
-        ).order_by("-created_at")
+        return (
+            StockTransferRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                product=product,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
 
     @staticmethod
     def list_by_source_warehouse(
@@ -90,10 +139,19 @@ class StockTransferRepository:
         organization,
         warehouse,
     ):
-        return StockTransfer.objects(
-            organization=organization,
-            source_warehouse=warehouse,
-        ).order_by("-created_at")
+        return (
+            StockTransferRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                source_warehouse=warehouse,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
 
     @staticmethod
     def list_by_destination_warehouse(
@@ -101,10 +159,19 @@ class StockTransferRepository:
         organization,
         warehouse,
     ):
-        return StockTransfer.objects(
-            organization=organization,
-            destination_warehouse=warehouse,
-        ).order_by("-created_at")
+        return (
+            StockTransferRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                destination_warehouse=warehouse,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
 
     @staticmethod
     def list_by_status(
@@ -112,10 +179,19 @@ class StockTransferRepository:
         organization,
         status,
     ):
-        return StockTransfer.objects(
-            organization=organization,
-            status=status,
-        ).order_by("-created_at")
+        return (
+            StockTransferRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                status=status,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
 
     @staticmethod
     def update_status(
@@ -126,6 +202,19 @@ class StockTransferRepository:
     ):
         transfer.status = status
         transfer.completed_at = completed_at
+
         transfer.save()
 
         return transfer
+
+    @staticmethod
+    def delete_transfer(
+        *,
+        transfer,
+    ):
+        if not transfer:
+            return False
+
+        transfer.delete()
+
+        return True

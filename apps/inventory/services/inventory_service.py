@@ -453,25 +453,56 @@ class InventoryService:
         else:
             movement_type = "ADJUSTMENT_OUT"
 
-        inventory = InventoryRepository.update_quantity(
-            inventory=inventory,
-            quantity=quantity_after,
-        )
+        try:
 
-        StockMovementService.create_movement(
-            user=user,
-            organization=organization,
-            inventory=inventory,
-            movement_type=movement_type,
-            quantity=quantity_change,
-            quantity_before=quantity_before,
-            quantity_after=quantity_after,
-            reserved_before=reserved_before,
-            reserved_after=inventory.reserved_quantity,
-            reference_type=reference_type,
-            reference_id=reference_id,
-            notes=notes,
-        )
+            inventory = (
+                InventoryRepository
+                .update_quantity(
+                    inventory=inventory,
+                    quantity=quantity_after,
+                )
+            )
+
+            (
+                StockMovementService
+                .create_movement(
+                    user=user,
+                    organization=organization,
+                    inventory=inventory,
+                    movement_type=movement_type,
+                    quantity=quantity_change,
+                    quantity_before=quantity_before,
+                    quantity_after=quantity_after,
+                    reserved_before=reserved_before,
+                    reserved_after=(
+                        inventory
+                        .reserved_quantity
+                    ),
+                    reference_type=reference_type,
+                    reference_id=reference_id,
+                    notes=notes,
+                )
+            )
+
+        except Exception:
+
+            # Best-effort rollback so a failed
+            # ledger write does not leave the
+            # inventory balance changed.
+            try:
+
+                inventory = (
+                    InventoryRepository
+                    .update_quantity(
+                        inventory=inventory,
+                        quantity=quantity_before,
+                    )
+                )
+
+            except Exception:
+                pass
+
+            raise
 
         return inventory
 

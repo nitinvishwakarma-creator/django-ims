@@ -424,6 +424,104 @@ class Command(
         )
 
         check(
+            "Warehouse collection route available",
+            route_exists(
+                "/api/v1/warehouses/"
+            ),
+        )
+
+        check(
+            "Warehouse detail route available",
+            route_exists(
+                (
+                    "/api/v1/warehouses/"
+                    "audit-warehouse-id/"
+                )
+            ),
+        )
+
+        check(
+            "Warehouse activation route available",
+            route_exists(
+                (
+                    "/api/v1/warehouses/"
+                    "audit-warehouse-id/activate/"
+                )
+            ),
+        )
+
+        check(
+            "Warehouse deactivation route available",
+            route_exists(
+                (
+                    "/api/v1/warehouses/"
+                    "audit-warehouse-id/deactivate/"
+                )
+            ),
+        )
+
+        check(
+            "Inventory collection route available",
+            route_exists(
+                "/api/v1/inventory/"
+            ),
+        )
+
+        check(
+            "Inventory detail route available",
+            route_exists(
+                (
+                    "/api/v1/inventory/"
+                    "audit-inventory-id/"
+                )
+            ),
+        )
+
+        check(
+            "Inventory adjustment route available",
+            route_exists(
+                (
+                    "/api/v1/inventory/"
+                    "audit-inventory-id/adjust/"
+                )
+            ),
+        )
+
+        check(
+            "Stock movement collection route available",
+            route_exists(
+                "/api/v1/stock-movements/"
+            ),
+        )
+
+        check(
+            "Stock movement detail route available",
+            route_exists(
+                (
+                    "/api/v1/stock-movements/"
+                    "audit-movement-id/"
+                )
+            ),
+        )
+
+        check(
+            "Stock transfer collection route available",
+            route_exists(
+                "/api/v1/stock-transfers/"
+            ),
+        )
+
+        check(
+            "Stock transfer detail route available",
+            route_exists(
+                (
+                    "/api/v1/stock-transfers/"
+                    "audit-transfer-id/"
+                )
+            ),
+        )
+
+        check(
             "Permission-list route available",
             route_exists(
                 "/api/v1/permissions/"
@@ -663,6 +761,34 @@ class Command(
                     {},
                 )
             )
+
+            warehouse_endpoints = (
+                manifest_endpoints.get(
+                    "warehouses",
+                    {},
+                )
+            )
+
+            inventory_endpoints = (
+                manifest_endpoints.get(
+                    "inventory",
+                    {},
+                )
+            )
+
+            movement_endpoints = (
+                manifest_endpoints.get(
+                    "stock_movements",
+                    {},
+                )
+            )
+
+            transfer_endpoints = (
+                manifest_endpoints.get(
+                    "stock_transfers",
+                    {},
+                )
+            )
             check(
                 (
                     "Discovery exposes current "
@@ -839,7 +965,168 @@ class Command(
                     "/api/v1/products/"
                 ),
             )
+            check(
+                (
+                    "Discovery exposes warehouse "
+                    "management endpoints"
+                ),
+                (
+                    warehouse_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/warehouses/"
+                    and
+                    warehouse_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    warehouse_endpoints
+                    .get(
+                        "activate",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    warehouse_endpoints
+                    .get(
+                        "deactivate",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                ),
+            )
 
+            check(
+                (
+                    "Discovery exposes inventory "
+                    "balance endpoints"
+                ),
+                (
+                    inventory_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/inventory/"
+                    and
+                    inventory_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    inventory_endpoints
+                    .get(
+                        "adjust",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes immutable "
+                    "stock movement endpoints"
+                ),
+                (
+                    movement_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/stock-movements/"
+                    and
+                    movement_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "immutable"
+                    )
+                    is True
+                    and
+                    movement_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes stock "
+                    "transfer endpoints"
+                ),
+                (
+                    transfer_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/stock-transfers/"
+                    and
+                    transfer_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                ),
+            )
             check(
                 "Users remain inside endpoints",
                 (

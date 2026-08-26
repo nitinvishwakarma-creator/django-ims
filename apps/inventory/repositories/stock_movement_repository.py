@@ -1,7 +1,22 @@
-from apps.inventory.models import StockMovement
+from mongoengine.errors import (
+    ValidationError,
+)
+
+from apps.inventory.models import (
+    StockMovement,
+)
 
 
 class StockMovementRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return StockMovement.objects(
+            organization=organization,
+        )
 
     @staticmethod
     def create_movement(
@@ -21,10 +36,6 @@ class StockMovementRepository:
         reference_id="",
         notes="",
     ):
-        """
-        Create an immutable stock movement record.
-        """
-
         movement = StockMovement(
             organization=organization,
             inventory=inventory,
@@ -52,19 +63,42 @@ class StockMovementRepository:
         organization,
         movement_id,
     ):
-        return StockMovement.objects(
-            organization=organization,
-            id=movement_id,
-        ).first()
+        try:
+
+            return (
+                StockMovementRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=movement_id,
+                )
+                .first()
+            )
+
+        except (
+            ValidationError,
+            TypeError,
+            ValueError,
+        ):
+
+            return None
 
     @staticmethod
     def list_by_organization(
         *,
         organization,
     ):
-        return StockMovement.objects(
-            organization=organization,
-        ).order_by("-created_at")
+        return (
+            StockMovementRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
 
     @staticmethod
     def list_by_inventory(
@@ -72,10 +106,19 @@ class StockMovementRepository:
         organization,
         inventory,
     ):
-        return StockMovement.objects(
-            organization=organization,
-            inventory=inventory,
-        ).order_by("-created_at")
+        return (
+            StockMovementRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                inventory=inventory,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
 
     @staticmethod
     def list_by_product(
@@ -83,10 +126,19 @@ class StockMovementRepository:
         organization,
         product,
     ):
-        return StockMovement.objects(
-            organization=organization,
-            product=product,
-        ).order_by("-created_at")
+        return (
+            StockMovementRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                product=product,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
 
     @staticmethod
     def list_by_warehouse(
@@ -94,10 +146,19 @@ class StockMovementRepository:
         organization,
         warehouse,
     ):
-        return StockMovement.objects(
-            organization=organization,
-            warehouse=warehouse,
-        ).order_by("-created_at")
+        return (
+            StockMovementRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                warehouse=warehouse,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
 
     @staticmethod
     def list_by_type(
@@ -105,7 +166,28 @@ class StockMovementRepository:
         organization,
         movement_type,
     ):
-        return StockMovement.objects(
-            organization=organization,
-            movement_type=movement_type,
-        ).order_by("-created_at")
+        return (
+            StockMovementRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                movement_type=movement_type,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
+        )
+
+    @staticmethod
+    def delete_movement(
+        *,
+        movement,
+    ):
+        if not movement:
+            return False
+
+        movement.delete()
+
+        return True

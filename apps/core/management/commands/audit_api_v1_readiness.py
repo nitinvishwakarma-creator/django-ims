@@ -378,6 +378,61 @@ class Command(
                 )
             ),
         )
+
+        check(
+            "Permission-list route available",
+            route_exists(
+                "/api/v1/permissions/"
+            ),
+        )
+
+        check(
+            "Role collection route available",
+            route_exists(
+                "/api/v1/roles/"
+            ),
+        )
+
+        check(
+            "Role detail route available",
+            route_exists(
+                "/api/v1/roles/audit-role-id/"
+            ),
+        )
+
+        check(
+            (
+                "Role permission-assignment "
+                "route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/roles/"
+                    "audit-role-id/permissions/"
+                )
+            ),
+        )
+
+        check(
+            "Role activation route available",
+            route_exists(
+                (
+                    "/api/v1/roles/"
+                    "audit-role-id/activate/"
+                )
+            ),
+        )
+
+        check(
+            "Role deactivation route available",
+            route_exists(
+                (
+                    "/api/v1/roles/"
+                    "audit-role-id/deactivate/"
+                )
+            ),
+        )
+
         check(
             "Internal contract routes hidden",
             not route_exists(
@@ -646,6 +701,90 @@ class Command(
                     )
                 ),
             )
+
+            authorization_endpoints = (
+                manifest_endpoints.get(
+                    "authorization",
+                    {},
+                )
+            )
+
+            required_authorization_endpoints = {
+                "permissions",
+                "roles",
+                "role_detail",
+                "role_permissions",
+                "role_activate",
+                "role_deactivate",
+            }
+
+            check(
+                (
+                    "Discovery exposes authorization "
+                    "management endpoints"
+                ),
+                (
+                    required_authorization_endpoints
+                    <=
+                    set(
+                        authorization_endpoints
+                    )
+                    and
+                    all(
+                        authorization_endpoints[
+                            endpoint_name
+                        ].get(
+                            "status"
+                        )
+                        ==
+                        "available"
+
+                        for endpoint_name
+                        in (
+                            required_authorization_endpoints
+                        )
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery documents protected "
+                    "system-role operations"
+                ),
+                (
+                    authorization_endpoints
+                    .get(
+                        "role_permissions",
+                        {},
+                    )
+                    .get(
+                        "system_roles_protected"
+                    )
+                    is True
+                    and
+                    authorization_endpoints
+                    .get(
+                        "role_deactivate",
+                        {},
+                    )
+                    .get(
+                        "system_roles_protected"
+                    )
+                    is True
+                    and
+                    authorization_endpoints
+                    .get(
+                        "role_deactivate",
+                        {},
+                    )
+                    .get(
+                        "assigned_user_protection"
+                    )
+                    is True
+                ),
+            )
+
         auth_response = client.get(
             "/api/v1/auth/",
             **request_options,
@@ -834,7 +973,79 @@ class Command(
             ==
             "UNAUTHORIZED",
         )
-        
+
+        anonymous_permissions = client.get(
+            "/api/v1/permissions/",
+            **request_options,
+        )
+
+        check(
+            (
+                "Anonymous permission request "
+                "rejected"
+            ),
+            anonymous_permissions.status_code
+            ==
+            401,
+        )
+
+        try:
+            anonymous_permissions_code = (
+                anonymous_permissions.json()
+                [
+                    "error"
+                ][
+                    "code"
+                ]
+            )
+
+        except Exception:
+            anonymous_permissions_code = None
+
+        check(
+            (
+                "Anonymous permission error "
+                "uses API contract"
+            ),
+            anonymous_permissions_code
+            ==
+            "UNAUTHORIZED",
+        )
+
+        anonymous_roles = client.get(
+            "/api/v1/roles/",
+            **request_options,
+        )
+
+        check(
+            "Anonymous role request rejected",
+            anonymous_roles.status_code
+            ==
+            401,
+        )
+
+        try:
+            anonymous_roles_code = (
+                anonymous_roles.json()
+                [
+                    "error"
+                ][
+                    "code"
+                ]
+            )
+
+        except Exception:
+            anonymous_roles_code = None
+
+        check(
+            (
+                "Anonymous role error uses "
+                "API contract"
+            ),
+            anonymous_roles_code
+            ==
+            "UNAUTHORIZED",
+        )
         # ==================================================
         # SUMMARY
         # ==================================================

@@ -135,6 +135,197 @@ class APIDiscoveryService:
                     "available",
             },
         }
+
+    @staticmethod
+    def get_authorization_endpoints():
+        return {
+            "permissions": {
+                "method":
+                    "GET",
+
+                "path":
+                    "/api/v1/permissions/",
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    False,
+
+                "permission":
+                    "permissions.read",
+
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+
+                "status":
+                    "available",
+            },
+
+            "roles": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+
+                "path":
+                    "/api/v1/roles/",
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permissions": {
+                    "GET":
+                        "roles.read",
+
+                    "POST":
+                        "roles.create",
+                },
+
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+
+                "status":
+                    "available",
+            },
+
+            "role_detail": {
+                "methods": [
+                    "GET",
+                    "PATCH",
+                ],
+
+                "path":
+                    "/api/v1/roles/{role_id}/",
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permissions": {
+                    "GET":
+                        "roles.read",
+
+                    "PATCH":
+                        "roles.update",
+                },
+
+                "cross_tenant_behavior":
+                    "not_found",
+
+                "status":
+                    "available",
+            },
+
+            "role_permissions": {
+                "method":
+                    "PATCH",
+
+                "path":
+                    (
+                        "/api/v1/roles/"
+                        "{role_id}/permissions/"
+                    ),
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permission":
+                    "roles.assign_permissions",
+
+                "replacement_semantics":
+                    True,
+
+                "system_roles_protected":
+                    True,
+
+                "cross_tenant_behavior":
+                    "not_found",
+
+                "status":
+                    "available",
+            },
+
+            "role_activate": {
+                "method":
+                    "POST",
+
+                "path":
+                    (
+                        "/api/v1/roles/"
+                        "{role_id}/activate/"
+                    ),
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permission":
+                    "roles.activate",
+
+                "idempotent":
+                    True,
+
+                "cross_tenant_behavior":
+                    "not_found",
+
+                "status":
+                    "available",
+            },
+
+            "role_deactivate": {
+                "method":
+                    "POST",
+
+                "path":
+                    (
+                        "/api/v1/roles/"
+                        "{role_id}/deactivate/"
+                    ),
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permission":
+                    "roles.deactivate",
+
+                "idempotent":
+                    True,
+
+                "system_roles_protected":
+                    True,
+
+                "assigned_user_protection":
+                    True,
+
+                "cross_tenant_behavior":
+                    "not_found",
+
+                "status":
+                    "available",
+            },
+        }
     
     @staticmethod
     def get_capabilities():
@@ -383,6 +574,12 @@ class APIDiscoveryService:
                     (
                         APIDiscoveryService
                         .get_organization_endpoints()
+                    ),
+                    
+                "authorization":
+                    (
+                        APIDiscoveryService
+                        .get_authorization_endpoints()
                     ),
 
                 "users":

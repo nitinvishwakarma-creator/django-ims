@@ -30,10 +30,14 @@ urlpatterns = [
             "apps.organizations.api.v1.urls"
         ),
     ),
-    # ==================================================
-    # USERS API
-    # ==================================================
 
+    path(
+        "",
+        include(
+            "apps.authorization.api.v1.urls"
+        ),
+    ),
+    
     path(
         "users/",
         include(

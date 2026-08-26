@@ -64,6 +64,10 @@ class Role(Document):
     description = StringField(
         max_length=500,
     )
+    
+    is_system = BooleanField(
+        default=False,
+    )
 
     permissions = ListField(
         ReferenceField(Permission),

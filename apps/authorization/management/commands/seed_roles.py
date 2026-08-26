@@ -1,135 +1,393 @@
-from django.core.management.base import BaseCommand
+from datetime import datetime
 
-from apps.authorization.models import Role, Permission
-from apps.authorization.roles import ROLE_CATALOG
-from apps.accounts.models import User
+from bson import ObjectId
+from bson.errors import InvalidId
+
+from django.core.management.base import (
+    BaseCommand,
+    CommandError,
+)
+
+from apps.authorization.models import (
+    Permission,
+    Role,
+)
+from apps.authorization.roles import (
+    ROLE_CATALOG,
+)
+from apps.organizations.models import (
+    Organization,
+)
 
 
 class Command(BaseCommand):
 
-    help = "Create default roles for an organization."
+    help = (
+        "Synchronize default roles for "
+        "an organization."
+    )
 
-    def add_arguments(self, parser):
+    def add_arguments(
+        self,
+        parser,
+    ):
         parser.add_argument(
             "--organization",
             required=True,
             help="Organization ID",
         )
 
-    def handle(self, *args, **options):
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help=(
+                "Report required changes "
+                "without modifying MongoDB."
+            ),
+        )
 
-        organization_id = options["organization"]
+    def handle(
+        self,
+        *args,
+        **options,
+    ):
+        organization_id = (
+            options[
+                "organization"
+            ]
+        )
 
-        user = User.objects(
-            organization=organization_id
-        ).first()
+        dry_run = bool(
+            options[
+                "dry_run"
+            ]
+        )
 
-        if not user:
-            self.stdout.write(
-                self.style.ERROR(
-                    "No user found for this organization."
-                )
-            )
-            return
+        # ==================================================
+        # ORGANIZATION
+        # ==================================================
 
-        organization = user.organization
-
-        if not organization:
-            self.stdout.write(
-                self.style.ERROR(
-                    "User does not belong to an organization."
-                )
-            )
-            return
-
-        created_count = 0
-        existing_count = 0
-
-        for key, data in ROLE_CATALOG.items():
-
-            role = Role.objects(
-                organization=organization,
-                name=data["name"],
-            ).first()
-
-            if role:
-
-                permissions = []
-
-                for permission_code in data["permissions"]:
-
-                    permission = Permission.objects(
-                        code=permission_code,
-                        is_active=True,
-                    ).first()
-
-                    if not permission:
-                        self.stdout.write(
-                            self.style.ERROR(
-                                f"Permission not found: {permission_code}"
-                            )
-                        )
-                        continue
-
-                    permissions.append(permission)
-
-                role.description = data["description"]
-                role.permissions = permissions
-                role.save()
-
-                existing_count += 1
-
-                self.stdout.write(
-                    self.style.WARNING(
-                        f"Updated: {data['name']}"
+        try:
+            normalized_organization_id = (
+                ObjectId(
+                    str(
+                        organization_id
                     )
                 )
+            )
+
+        except (
+            InvalidId,
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise CommandError(
+                "Enter a valid organization ID."
+            ) from exc
+
+        organization = (
+            Organization.objects(
+                id=normalized_organization_id
+            )
+            .first()
+        )
+
+        if not organization:
+            raise CommandError(
+                "Organization not found."
+            )
+
+        if not organization.is_active:
+            raise CommandError(
+                "Organization is inactive."
+            )
+
+        # ==================================================
+        # REQUIRED PERMISSIONS
+        # ==================================================
+
+        required_codes = sorted({
+            permission_code
+
+            for role_data
+            in ROLE_CATALOG.values()
+
+            for permission_code
+            in role_data[
+                "permissions"
+            ]
+        })
+
+        active_permissions = {
+            permission.code:
+                permission
+
+            for permission
+            in Permission.objects(
+                code__in=required_codes,
+                is_active=True,
+            )
+        }
+
+        missing_permissions = sorted(
+            set(
+                required_codes
+            )
+            -
+            set(
+                active_permissions
+            )
+        )
+
+        if missing_permissions:
+            raise CommandError(
+                (
+                    "Required active permissions "
+                    "are missing: "
+                    +
+                    ", ".join(
+                        missing_permissions
+                    )
+                )
+            )
+
+        # ==================================================
+        # SYNCHRONIZATION
+        # ==================================================
+
+        created_count = 0
+        updated_count = 0
+        unchanged_count = 0
+
+        if dry_run:
+            self.stdout.write(
+                self.style.WARNING(
+                    "DRY RUN — no changes will be saved."
+                )
+            )
+
+        for role_key, data in (
+            ROLE_CATALOG.items()
+        ):
+            desired_permissions = [
+                active_permissions[
+                    permission_code
+                ]
+
+                for permission_code
+                in data[
+                    "permissions"
+                ]
+            ]
+
+            role = (
+                Role.objects(
+                    organization=organization,
+                    name=data["name"],
+                )
+                .first()
+            )
+
+            if not role:
+                created_count += 1
+
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        (
+                            "Would create: "
+                            if dry_run
+                            else
+                            "Created: "
+                        )
+                        +
+                        data["name"]
+                        +
+                        " | permissions="
+                        +
+                        str(
+                            len(
+                                desired_permissions
+                            )
+                        )
+                    )
+                )
+
+                if not dry_run:
+                    Role(
+                        organization=organization,
+                        name=data["name"],
+                        description=(
+                            data["description"]
+                        ),
+                        is_system=bool(
+                            data["is_system"]
+                        ),
+                        permissions=(
+                            desired_permissions
+                        ),
+                        is_active=True,
+                    ).save(
+                        force_insert=True
+                    )
 
                 continue
 
-            permissions = []
+            changed_fields = []
 
-            for permission_code in data["permissions"]:
+            if (
+                role.description
+                !=
+                data["description"]
+            ):
+                role.description = (
+                    data["description"]
+                )
 
-                permission = Permission.objects(
-                    code=permission_code
-                ).first()
+                changed_fields.append(
+                    "description"
+                )
 
-                if not permission:
-                    self.stdout.write(
-                        self.style.ERROR(
-                            f"Permission not found: {permission_code}"
+            if (
+                bool(
+                    role.is_system
+                )
+                !=
+                bool(
+                    data["is_system"]
+                )
+            ):
+                role.is_system = bool(
+                    data["is_system"]
+                )
+
+                changed_fields.append(
+                    "is_system"
+                )
+
+            current_permission_ids = {
+                str(
+                    permission.id
+                )
+
+                for permission
+                in (
+                    role.permissions
+                    or
+                    []
+                )
+            }
+
+            desired_permission_ids = {
+                str(
+                    permission.id
+                )
+
+                for permission
+                in desired_permissions
+            }
+
+            if (
+                current_permission_ids
+                !=
+                desired_permission_ids
+            ):
+                role.permissions = (
+                    desired_permissions
+                )
+
+                changed_fields.append(
+                    "permissions"
+                )
+
+            if changed_fields:
+                updated_count += 1
+
+                self.stdout.write(
+                    self.style.WARNING(
+                        (
+                            "Would update: "
+                            if dry_run
+                            else
+                            "Updated: "
+                        )
+                        +
+                        data["name"]
+                        +
+                        " ["
+                        +
+                        ", ".join(
+                            changed_fields
+                        )
+                        +
+                        "]"
+                        +
+                        " | permissions="
+                        +
+                        str(
+                            len(
+                                desired_permissions
+                            )
                         )
                     )
-                    continue
+                )
 
-                permissions.append(permission)
+                if not dry_run:
+                    role.updated_at = (
+                        datetime.utcnow()
+                    )
 
-            Role(
-                organization=organization,
-                name=data["name"],
-                description=data["description"],
-                permissions=permissions,
-            ).save()
+                    role.save()
 
-            created_count += 1
+            else:
+                unchanged_count += 1
 
+                self.stdout.write(
+                    (
+                        "Unchanged: "
+                        +
+                        role_key
+                        +
+                        " | "
+                        +
+                        data["name"]
+                    )
+                )
+
+        # ==================================================
+        # SUMMARY
+        # ==================================================
+
+        self.stdout.write("")
+        self.stdout.write(
+            (
+                "Organization: "
+                f"{organization.name} "
+                f"({organization.id})"
+            )
+        )
+
+        self.stdout.write(
+            f"Created: {created_count}"
+        )
+
+        self.stdout.write(
+            f"Updated: {updated_count}"
+        )
+
+        self.stdout.write(
+            f"Unchanged: {unchanged_count}"
+        )
+
+        if dry_run:
             self.stdout.write(
-                self.style.SUCCESS(
-                    f"Created: {data['name']}"
+                self.style.WARNING(
+                    "Role synchronization dry run completed."
                 )
             )
 
-        self.stdout.write("")
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Created: {created_count}"
+        else:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "Role synchronization completed."
+                )
             )
-        )
-
-        self.stdout.write(
-            self.style.WARNING(
-                f"Already existed: {existing_count}"
-            )
-        )

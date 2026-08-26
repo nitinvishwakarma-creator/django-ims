@@ -1,142 +1,458 @@
-PERMISSION_CATALOG = {
+ACTION_LABELS = {
+    "read": "View",
+    "create": "Create",
+    "update": "Update",
+    "delete": "Delete",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "adjust": "Adjust",
+    "transfer": "Transfer",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "fulfill": "Fulfill",
+    "issue": "Issue",
+    "post": "Post",
+    "reconcile": "Reconcile",
+    "record_payment": "Record Payment",
+    "reverse": "Reverse",
+    "assign_permissions": "Assign Permissions",
+}
 
+
+PERMISSION_DEFINITIONS = [
     # ==================================================
-    # PRODUCTS
-    # ==================================================
-
-    "products.read": {
-        "name":
-            "View Products",
-
-        "description":
-            "Allows viewing products.",
-
-        "module":
-            "products",
-    },
-
-    "products.create": {
-        "name":
-            "Create Products",
-
-        "description":
-            "Allows creating products.",
-
-        "module":
-            "products",
-    },
-
-    "products.update": {
-        "name":
-            "Update Products",
-
-        "description":
-            "Allows updating products.",
-
-        "module":
-            "products",
-    },
-
-    "products.delete": {
-        "name":
-            "Delete Products",
-
-        "description":
-            "Allows deleting products.",
-
-        "module":
-            "products",
-    },
-
-    # ==================================================
-    # ORGANIZATIONS
+    # AUTHORIZATION
     # ==================================================
 
-    "organizations.update": {
-        "name":
-            "Update Organization",
+    (
+        "authorization",
+        "permissions",
+        "Permissions",
+        (
+            "read",
+        ),
+    ),
 
-        "description":
-            (
-                "Allows updating the current "
-                "organization's settings."
-            ),
-
-        "module":
-            "organizations",
-    },
+    (
+        "authorization",
+        "roles",
+        "Roles",
+        (
+            "read",
+            "create",
+            "update",
+            "activate",
+            "deactivate",
+            "assign_permissions",
+        ),
+    ),
 
     # ==================================================
-    # USERS
+    # ORGANIZATIONS AND USERS
     # ==================================================
 
-    "users.read": {
-        "name":
-            "View Users",
+    (
+        "organizations",
+        "organizations",
+        "Organizations",
+        (
+            "update",
+        ),
+    ),
 
-        "description":
-            (
-                "Allows viewing users within "
-                "the current organization."
-            ),
+    (
+        "users",
+        "users",
+        "Users",
+        (
+            "read",
+            "create",
+            "update",
+            "activate",
+            "deactivate",
+        ),
+    ),
 
-        "module":
-            "users",
-    },
+    # ==================================================
+    # PRODUCTS AND INVENTORY
+    # ==================================================
 
-    "users.create": {
-        "name":
-            "Create Users",
+    (
+        "products",
+        "products",
+        "Products",
+        (
+            "read",
+            "create",
+            "update",
+            "delete",
+        ),
+    ),
 
-        "description":
-            (
-                "Allows creating users within "
-                "the current organization."
-            ),
+    (
+        "inventory",
+        "warehouses",
+        "Warehouses",
+        (
+            "read",
+            "create",
+            "update",
+        ),
+    ),
 
-        "module":
-            "users",
-    },
+    (
+        "inventory",
+        "inventory",
+        "Inventory",
+        (
+            "read",
+            "create",
+            "adjust",
+            "transfer",
+        ),
+    ),
 
-    "users.update": {
-        "name":
-            "Update Users",
+    # ==================================================
+    # PURCHASING
+    # ==================================================
 
-        "description":
-            (
-                "Allows updating users within "
-                "the current organization."
-            ),
+    (
+        "purchasing",
+        "suppliers",
+        "Suppliers",
+        (
+            "read",
+            "create",
+            "update",
+        ),
+    ),
 
-        "module":
-            "users",
-    },
+    (
+        "purchasing",
+        "purchase_orders",
+        "Purchase Orders",
+        (
+            "read",
+            "create",
+            "update",
+            "cancel",
+        ),
+    ),
 
-    "users.activate": {
-        "name":
-            "Activate Users",
+    (
+        "purchasing",
+        "goods_receipts",
+        "Goods Receipts",
+        (
+            "read",
+            "create",
+        ),
+    ),
 
-        "description":
-            (
-                "Allows activating users within "
-                "the current organization."
-            ),
+    (
+        "purchasing",
+        "purchase_returns",
+        "Purchase Returns",
+        (
+            "read",
+            "create",
+            "confirm",
+            "cancel",
+        ),
+    ),
 
-        "module":
-            "users",
-    },
-    
-    "users.deactivate": {
-        "name":
-            "Deactivate Users",
+    (
+        "purchasing",
+        "vendor_bills",
+        "Vendor Bills",
+        (
+            "read",
+        ),
+    ),
 
-        "description":
-            (
-                "Allows deactivating users within "
-                "the current organization."
-            ),
+    (
+        "purchasing",
+        "bills",
+        "Bills",
+        (
+            "read",
+            "create",
+            "post",
+            "cancel",
+            "record_payment",
+        ),
+    ),
 
-        "module":
-            "users",
-    },
+    (
+        "purchasing",
+        "vendor_debit_notes",
+        "Vendor Debit Notes",
+        (
+            "read",
+            "create",
+            "issue",
+            "cancel",
+        ),
+    ),
+
+    (
+        "purchasing",
+        "supplier_payments",
+        "Supplier Payments",
+        (
+            "read",
+        ),
+    ),
+
+    # ==================================================
+    # SALES
+    # ==================================================
+
+    (
+        "sales",
+        "customers",
+        "Customers",
+        (
+            "read",
+            "create",
+            "update",
+        ),
+    ),
+
+    (
+        "sales",
+        "sales_orders",
+        "Sales Orders",
+        (
+            "read",
+            "create",
+            "update",
+            "fulfill",
+            "cancel",
+        ),
+    ),
+
+    (
+        "sales",
+        "invoices",
+        "Invoices",
+        (
+            "read",
+            "create",
+            "issue",
+            "cancel",
+            "record_payment",
+        ),
+    ),
+
+    (
+        "sales",
+        "customer_payments",
+        "Customer Payments",
+        (
+            "read",
+        ),
+    ),
+
+    (
+        "sales",
+        "sales_returns",
+        "Sales Returns",
+        (
+            "read",
+            "create",
+            "confirm",
+            "cancel",
+        ),
+    ),
+
+    (
+        "sales",
+        "credit_notes",
+        "Credit Notes",
+        (
+            "read",
+            "create",
+            "issue",
+            "cancel",
+        ),
+    ),
+
+    # ==================================================
+    # ACCOUNTING
+    # ==================================================
+
+    (
+        "accounting",
+        "chart_of_accounts",
+        "Chart of Accounts",
+        (
+            "read",
+            "create",
+            "update",
+            "deactivate",
+        ),
+    ),
+
+    (
+        "accounting",
+        "journal_entries",
+        "Journal Entries",
+        (
+            "read",
+            "create",
+            "post",
+            "reverse",
+        ),
+    ),
+
+    (
+        "accounting",
+        "general_ledger",
+        "General Ledger",
+        (
+            "read",
+        ),
+    ),
+
+    (
+        "accounting",
+        "trial_balance",
+        "Trial Balance",
+        (
+            "read",
+        ),
+    ),
+
+    (
+        "accounting",
+        "accounting_reports",
+        "Accounting Reports",
+        (
+            "read",
+        ),
+    ),
+
+    (
+        "accounting",
+        "accounting_audit",
+        "Accounting Audit",
+        (
+            "read",
+        ),
+    ),
+
+    # ==================================================
+    # BANKING
+    # ==================================================
+
+    (
+        "banking",
+        "bank_accounts",
+        "Bank Accounts",
+        (
+            "read",
+            "create",
+            "update",
+            "deactivate",
+        ),
+    ),
+
+    (
+        "banking",
+        "bank_transfers",
+        "Bank Transfers",
+        (
+            "read",
+            "create",
+            "post",
+            "cancel",
+        ),
+    ),
+
+    (
+        "banking",
+        "bank_statements",
+        "Bank Statements",
+        (
+            "read",
+            "create",
+            "reconcile",
+            "cancel",
+        ),
+    ),
+
+    (
+        "banking",
+        "bank_transactions",
+        "Bank Transactions",
+        (
+            "read",
+            "create",
+            "reconcile",
+        ),
+    ),
+]
+
+
+def build_permission_catalog():
+    catalog = {}
+
+    for (
+        module,
+        resource_code,
+        resource_name,
+        actions,
+    ) in PERMISSION_DEFINITIONS:
+
+        for action in actions:
+
+            action_label = (
+                ACTION_LABELS[
+                    action
+                ]
+            )
+
+            code = (
+                f"{resource_code}.{action}"
+            )
+
+            catalog[
+                code
+            ] = {
+                "name": (
+                    f"{action_label} "
+                    f"{resource_name}"
+                ),
+
+                "description": (
+                    f"Allows "
+                    f"{action_label.lower()} "
+                    f"{resource_name.lower()}."
+                ),
+
+                "module":
+                    module,
+            }
+
+    return catalog
+
+
+PERMISSION_CATALOG = (
+    build_permission_catalog()
+)
+
+
+LEGACY_PERMISSION_REPLACEMENTS = {
+    "product.view":
+        "products.read",
+
+    "product.create":
+        "products.create",
+
+    "product.update":
+        "products.update",
+
+    "product.delete":
+        "products.delete",
 }

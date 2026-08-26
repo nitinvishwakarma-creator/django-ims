@@ -528,6 +528,245 @@ class APIDiscoveryService:
         }
 
     @staticmethod
+    def get_category_endpoints():
+        return {
+            "list": {
+                "method":
+                    "GET",
+
+                "path":
+                    "/api/v1/categories/",
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permission":
+                    "products.read",
+
+                "active_only":
+                    True,
+
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_product_endpoints():
+        return {
+            # ==============================================
+            # COLLECTION
+            # ==============================================
+
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+
+                "path":
+                    "/api/v1/products/",
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permissions": {
+                    "GET":
+                        "products.read",
+
+                    "POST":
+                        "products.create",
+                },
+
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+
+                "filters": {
+                    "is_active":
+                        "boolean",
+                },
+
+                "search_fields": [
+                    "sku",
+                    "name",
+                    "brand",
+                    "barcode",
+                ],
+
+                "sort_fields": [
+                    "sku",
+                    "name",
+                    "brand",
+                    "unit",
+                    "cost_price",
+                    "selling_price",
+                    "created_at",
+                    "updated_at",
+                ],
+
+                "default_sort": [
+                    "-created_at",
+                    "id",
+                ],
+
+                "default_page_size":
+                    25,
+
+                "maximum_page_size":
+                    100,
+
+                "create_fields": [
+                    "sku",
+                    "name",
+                    "description",
+                    "category_id",
+                    "brand",
+                    "unit",
+                    "cost_price",
+                    "selling_price",
+                    "barcode",
+                ],
+
+                "required_create_fields": [
+                    "sku",
+                    "name",
+                    "category_id",
+                    "unit",
+                ],
+
+                "status":
+                    "available",
+            },
+
+            # ==============================================
+            # DETAIL
+            # ==============================================
+
+            "detail": {
+                "methods": [
+                    "GET",
+                    "PATCH",
+                ],
+
+                "path":
+                    (
+                        "/api/v1/products/"
+                        "{product_id}/"
+                    ),
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permissions": {
+                    "GET":
+                        "products.read",
+
+                    "PATCH":
+                        "products.update",
+                },
+
+                "editable_fields": [
+                    "sku",
+                    "name",
+                    "description",
+                    "category_id",
+                    "brand",
+                    "unit",
+                    "cost_price",
+                    "selling_price",
+                    "barcode",
+                ],
+
+                "cross_tenant_behavior":
+                    "not_found",
+
+                "status":
+                    "available",
+            },
+
+            # ==============================================
+            # ACTIVATE
+            # ==============================================
+
+            "activate": {
+                "method":
+                    "POST",
+
+                "path":
+                    (
+                        "/api/v1/products/"
+                        "{product_id}/activate/"
+                    ),
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permission":
+                    "products.update",
+
+                "idempotent":
+                    True,
+
+                "cross_tenant_behavior":
+                    "not_found",
+
+                "status":
+                    "available",
+            },
+
+            # ==============================================
+            # DEACTIVATE
+            # ==============================================
+
+            "deactivate": {
+                "method":
+                    "POST",
+
+                "path":
+                    (
+                        "/api/v1/products/"
+                        "{product_id}/deactivate/"
+                    ),
+
+                "authentication_required":
+                    True,
+
+                "tenant_scoped":
+                    True,
+
+                "permission":
+                    "products.delete",
+
+                "idempotent":
+                    True,
+
+                "hard_delete":
+                    False,
+
+                "cross_tenant_behavior":
+                    "not_found",
+
+                "status":
+                    "available",
+            },
+        }
+    @staticmethod
     def get_manifest():
         build_info = (
             BuildInfoService
@@ -586,6 +825,17 @@ class APIDiscoveryService:
                     (
                         APIDiscoveryService
                         .get_user_endpoints()
+                    ),
+                "categories":
+                    (
+                        APIDiscoveryService
+                        .get_category_endpoints()
+                    ),
+
+                "products":
+                    (
+                        APIDiscoveryService
+                        .get_product_endpoints()
                     ),
             },
 

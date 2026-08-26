@@ -380,6 +380,50 @@ class Command(
         )
 
         check(
+            "Category-list route available",
+            route_exists(
+                "/api/v1/categories/"
+            ),
+        )
+
+        check(
+            "Product collection route available",
+            route_exists(
+                "/api/v1/products/"
+            ),
+        )
+
+        check(
+            "Product detail route available",
+            route_exists(
+                (
+                    "/api/v1/products/"
+                    "audit-product-id/"
+                )
+            ),
+        )
+
+        check(
+            "Product activation route available",
+            route_exists(
+                (
+                    "/api/v1/products/"
+                    "audit-product-id/activate/"
+                )
+            ),
+        )
+
+        check(
+            "Product deactivation route available",
+            route_exists(
+                (
+                    "/api/v1/products/"
+                    "audit-product-id/deactivate/"
+                )
+            ),
+        )
+
+        check(
             "Permission-list route available",
             route_exists(
                 "/api/v1/permissions/"
@@ -606,6 +650,19 @@ class Command(
                 )
             )
 
+            category_endpoints = (
+                manifest_endpoints.get(
+                    "categories",
+                    {},
+                )
+            )
+
+            product_endpoints = (
+                manifest_endpoints.get(
+                    "products",
+                    {},
+                )
+            )
             check(
                 (
                     "Discovery exposes current "
@@ -641,6 +698,8 @@ class Command(
                     "Discovery exposes user "
                     "management endpoints"
                 ),
+
+
                 (
                     user_endpoints
                     .get(
@@ -685,6 +744,99 @@ class Command(
                     )
                     ==
                     "available"
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes product "
+                    "category endpoint"
+                ),
+                (
+                    category_endpoints
+                    .get(
+                        "list",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/categories/"
+                    and
+                    category_endpoints
+                    .get(
+                        "list",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes product "
+                    "management endpoints"
+                ),
+                (
+                    product_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    product_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    product_endpoints
+                    .get(
+                        "activate",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    product_endpoints
+                    .get(
+                        "deactivate",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    product_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/products/"
                 ),
             )
 

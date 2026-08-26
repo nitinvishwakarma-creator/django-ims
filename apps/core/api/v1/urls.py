@@ -44,6 +44,13 @@ urlpatterns = [
             "apps.accounts.api.v1.user_urls"
         ),
     ),
+
+    path(
+        "",
+        include(
+            "apps.products.api.v1.urls"
+        ),
+    ),
 ]
 
 # ==================================================

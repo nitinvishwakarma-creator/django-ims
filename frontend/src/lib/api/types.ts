@@ -35,3 +35,20 @@ export interface CSRFData {
     cookie_name: string;
   };
 }
+export interface APIPagination {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
+export interface APIQueryMetadata {
+  search: string | null;
+  filters: Record<
+    string,
+    string | number | boolean
+  >;
+  sort: string[];
+}

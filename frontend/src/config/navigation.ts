@@ -3,6 +3,7 @@ import type {
 } from "lucide-react";
 
 import {
+  ArrowDownUp,
   Banknote,
   Boxes,
   Building2,
@@ -63,12 +64,24 @@ export const navigationSections:
           icon: Warehouse,
           permission: "warehouses.read",
         },
-        {
-          label: "Stock",
-          href: "/inventory",
-          icon: Boxes,
-          permission: "inventory.read",
-        },
+          {
+            label: "Stock",
+            href: "/inventory",
+            icon: Boxes,
+            permission: "inventory.read",
+          },
+          {
+            label: "Stock Movements",
+            href: "/stock-movements",
+            icon: ArrowDownUp,
+            permission: "inventory.read",
+          },
+          {
+            label: "Stock Transfers",
+            href: "/stock-transfers",
+            icon: Truck,
+            permission: "inventory.read",
+          },
       ],
     },
 

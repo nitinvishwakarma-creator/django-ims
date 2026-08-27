@@ -36,11 +36,7 @@ export default function RequireAuth({
     status,
   ]);
 
-  if (
-    status === "loading"
-    ||
-    !isAuthenticated
-  ) {
+  if (status === "loading") {
     return (
       <main
         className="
@@ -60,6 +56,10 @@ export default function RequireAuth({
         </div>
       </main>
     );
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return children;

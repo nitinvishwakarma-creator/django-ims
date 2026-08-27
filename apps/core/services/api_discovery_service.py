@@ -768,6 +768,210 @@ class APIDiscoveryService:
         }
 
     @staticmethod
+    def get_customer_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/customers/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "customers.read",
+                    "POST":
+                        "customers.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "status":
+                    "available",
+            },
+
+            "detail": {
+                "methods": [
+                    "GET",
+                    "PATCH",
+                ],
+                "path": (
+                    "/api/v1/customers/"
+                    "{customer_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "customers.read",
+                    "PATCH":
+                        "customers.update",
+                },
+                "editable_fields": [
+                    "name",
+                    "email",
+                    "phone",
+                    "gstin",
+                    "billing_address",
+                    "shipping_address",
+                    "city",
+                    "state",
+                    "country",
+                    "pincode",
+                ],
+                "status":
+                    "available",
+            },
+
+            "activate": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/customers/"
+                    "{customer_id}/activate/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "customers.update",
+                "status":
+                    "available",
+            },
+
+            "deactivate": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/customers/"
+                    "{customer_id}/deactivate/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "customers.update",
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_supplier_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/suppliers/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "suppliers.read",
+                    "POST":
+                        "suppliers.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "status":
+                    "available",
+            },
+
+            "detail": {
+                "methods": [
+                    "GET",
+                    "PATCH",
+                ],
+                "path": (
+                    "/api/v1/suppliers/"
+                    "{supplier_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "suppliers.read",
+                    "PATCH":
+                        "suppliers.update",
+                },
+                "editable_fields": [
+                    "name",
+                    "email",
+                    "phone",
+                    "gstin",
+                    "address",
+                    "city",
+                    "state",
+                    "country",
+                    "pincode",
+                ],
+                "status":
+                    "available",
+            },
+
+            "activate": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/suppliers/"
+                    "{supplier_id}/activate/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "suppliers.update",
+                "status":
+                    "available",
+            },
+
+            "deactivate": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/suppliers/"
+                    "{supplier_id}/deactivate/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "suppliers.update",
+                "status":
+                    "available",
+            },
+        }
+
+
+    @staticmethod
     def get_warehouse_endpoints():
         return {
             "collection": {
@@ -1158,6 +1362,17 @@ class APIDiscoveryService:
                     (
                         APIDiscoveryService
                         .get_product_endpoints()
+                    ),
+                "customers":
+                    (
+                        APIDiscoveryService
+                        .get_customer_endpoints()
+                    ),
+
+                "suppliers":
+                    (
+                        APIDiscoveryService
+                        .get_supplier_endpoints()
                     ),
                 "warehouses":
                     (

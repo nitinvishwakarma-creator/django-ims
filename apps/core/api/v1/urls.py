@@ -58,6 +58,18 @@ urlpatterns = [
             "apps.inventory.api.v1.urls"
         ),
     ),
+    path(
+        "",
+        include(
+            "apps.sales.api.v1.urls"
+        ),
+    ),
+    path(
+        "",
+        include(
+            "apps.purchasing.api.v1.urls"
+        ),
+    ),
 ]
 
 # ==================================================

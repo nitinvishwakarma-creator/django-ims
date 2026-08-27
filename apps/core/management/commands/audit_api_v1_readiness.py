@@ -424,6 +424,80 @@ class Command(
         )
 
         check(
+            "Customer collection route available",
+            route_exists(
+                "/api/v1/customers/"
+            ),
+        )
+
+        check(
+            "Customer detail route available",
+            route_exists(
+                (
+                    "/api/v1/customers/"
+                    "audit-customer-id/"
+                )
+            ),
+        )
+
+        check(
+            "Customer activation route available",
+            route_exists(
+                (
+                    "/api/v1/customers/"
+                    "audit-customer-id/activate/"
+                )
+            ),
+        )
+
+        check(
+            "Customer deactivation route available",
+            route_exists(
+                (
+                    "/api/v1/customers/"
+                    "audit-customer-id/deactivate/"
+                )
+            ),
+        )
+
+        check(
+            "Supplier collection route available",
+            route_exists(
+                "/api/v1/suppliers/"
+            ),
+        )
+
+        check(
+            "Supplier detail route available",
+            route_exists(
+                (
+                    "/api/v1/suppliers/"
+                    "audit-supplier-id/"
+                )
+            ),
+        )
+
+        check(
+            "Supplier activation route available",
+            route_exists(
+                (
+                    "/api/v1/suppliers/"
+                    "audit-supplier-id/activate/"
+                )
+            ),
+        )
+
+        check(
+            "Supplier deactivation route available",
+            route_exists(
+                (
+                    "/api/v1/suppliers/"
+                    "audit-supplier-id/deactivate/"
+                )
+            ),
+        )
+
+        check(
             "Warehouse collection route available",
             route_exists(
                 "/api/v1/warehouses/"
@@ -762,6 +836,20 @@ class Command(
                 )
             )
 
+            customer_endpoints = (
+                manifest_endpoints.get(
+                    "customers",
+                    {},
+                )
+            )
+
+            supplier_endpoints = (
+                manifest_endpoints.get(
+                    "suppliers",
+                    {},
+                )
+            )
+
             warehouse_endpoints = (
                 manifest_endpoints.get(
                     "warehouses",
@@ -963,6 +1051,109 @@ class Command(
                     )
                     ==
                     "/api/v1/products/"
+                ),
+            )
+            check(
+                (
+                    "Discovery exposes customer "
+                    "management endpoints"
+                ),
+                (
+                    customer_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/customers/"
+                    and
+                    customer_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    customer_endpoints
+                    .get(
+                        "activate",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    customer_endpoints
+                    .get(
+                        "deactivate",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes supplier "
+                    "management endpoints"
+                ),
+                (
+                    supplier_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/suppliers/"
+                    and
+                    supplier_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    supplier_endpoints
+                    .get(
+                        "activate",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    supplier_endpoints
+                    .get(
+                        "deactivate",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
                 ),
             )
             check(

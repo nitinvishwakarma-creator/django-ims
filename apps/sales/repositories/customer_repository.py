@@ -152,3 +152,38 @@ class CustomerRepository:
         customer.save()
 
         return customer
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return Customer.objects(
+            organization=organization,
+        )
+
+    @staticmethod
+    def code_exists(
+        *,
+        organization,
+        code,
+        exclude_customer_id=None,
+    ):
+        queryset = Customer.objects(
+            organization=organization,
+            code=code,
+        )
+
+        if exclude_customer_id:
+            queryset = queryset.filter(
+                id__ne=exclude_customer_id,
+            )
+
+        return (
+            queryset
+            .only(
+                "id"
+            )
+            .first()
+            is not None
+        )

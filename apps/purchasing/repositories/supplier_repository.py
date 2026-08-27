@@ -164,3 +164,38 @@ class SupplierRepository:
         supplier.save()
 
         return supplier
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return Supplier.objects(
+            organization=organization,
+        )
+
+    @staticmethod
+    def code_exists(
+        *,
+        organization,
+        code,
+        exclude_supplier_id=None,
+    ):
+        queryset = Supplier.objects(
+            organization=organization,
+            code=code,
+        )
+
+        if exclude_supplier_id:
+            queryset = queryset.filter(
+                id__ne=exclude_supplier_id,
+            )
+
+        return (
+            queryset
+            .only(
+                "id"
+            )
+            .first()
+            is not None
+        )

@@ -870,6 +870,157 @@ class APIDiscoveryService:
         }
 
     @staticmethod
+    def get_sales_order_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/sales-orders/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "sales_orders.read",
+                    "POST":
+                        "sales_orders.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "customer_id":
+                        "object_id",
+                    "warehouse_id":
+                        "object_id",
+                    "status":
+                        "string",
+                },
+                "create_fields": [
+                    "customer_id",
+                    "warehouse_id",
+                    "order_date",
+                    "expected_delivery_date",
+                    "items",
+                    "notes",
+                ],
+                "server_calculated_fields": [
+                    "so_number",
+                    "subtotal",
+                    "tax_amount",
+                    "discount_amount",
+                    "total_amount",
+                    "status",
+                ],
+                "status":
+                    "available",
+            },
+
+            "detail": {
+                "methods": [
+                    "GET",
+                    "PUT",
+                ],
+                "path": (
+                    "/api/v1/sales-orders/"
+                    "{sales_order_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "sales_orders.read",
+                    "PUT":
+                        "sales_orders.update",
+                },
+                "editable_statuses": [
+                    "DRAFT",
+                ],
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+
+            "confirm": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/sales-orders/"
+                    "{sales_order_id}/confirm/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "sales_orders.update",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "inventory_effect":
+                    "reserve",
+                "status":
+                    "available",
+            },
+
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/sales-orders/"
+                    "{sales_order_id}/cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "sales_orders.cancel",
+                "inventory_effect":
+                    "release_reservation",
+                "status":
+                    "available",
+            },
+
+            "fulfill": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/sales-orders/"
+                    "{sales_order_id}/fulfill/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "sales_orders.fulfill",
+                "from_statuses": [
+                    "CONFIRMED",
+                    "PARTIALLY_FULFILLED",
+                ],
+                "inventory_effect":
+                    "stock_out",
+                "supports_partial_fulfillment":
+                    True,
+                "status":
+                    "available",
+            },
+        }
+    @staticmethod
     def get_supplier_endpoints():
         return {
             "collection": {
@@ -1368,7 +1519,11 @@ class APIDiscoveryService:
                         APIDiscoveryService
                         .get_customer_endpoints()
                     ),
-
+                "sales_orders":
+                    (
+                        APIDiscoveryService
+                        .get_sales_order_endpoints()
+                    ),
                 "suppliers":
                     (
                         APIDiscoveryService

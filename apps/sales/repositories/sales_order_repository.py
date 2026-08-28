@@ -6,6 +6,20 @@ from apps.sales.models import SalesOrder
 class SalesOrderRepository:
 
     @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        """
+        Return the tenant-scoped Sales Order queryset
+        used by API filtering, searching, sorting,
+        and pagination.
+        """
+
+        return SalesOrder.objects(
+            organization=organization,
+        )
+    @staticmethod
     def create_sales_order(
         *,
         organization,
@@ -89,10 +103,15 @@ class SalesOrderRepository:
         List all sales orders for an organization.
         """
 
-        return SalesOrder.objects(
-            organization=organization,
-        ).order_by(
-            "-created_at"
+        return (
+            SalesOrderRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod

@@ -16,6 +16,15 @@ from apps.core.services.api_response_service import (
 )
 from apps.sales.api.v1.serializers import (
     CustomerAPISerializer,
+    SalesOrderAPISerializer,
+)
+from apps.sales.repositories.sales_order_repository import (
+    SalesOrderRepository,
+)
+from apps.sales.services.sales_order_api_service import (
+    SalesOrderAPIService,
+    SalesOrderAPIStateError,
+    SalesOrderAPIValidationError,
 )
 from apps.sales.repositories.customer_repository import (
     CustomerRepository,
@@ -747,6 +756,936 @@ def customer_deactivate_api(
             },
             message=(
                 "Customer deactivated "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="sales_orders.collection",
+    limit=120,
+    window_seconds=60,
+)
+def sales_order_collection_api(
+    request,
+):
+    # ==================================================
+    # GET: LIST SALES ORDERS
+    # ==================================================
+
+    if request.method == "GET":
+
+        if not (
+            AuthorizationService
+            .has_permission(
+                request.api_user,
+                "sales_orders.read",
+            )
+        ):
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        queryset = (
+            SalesOrderRepository
+            .queryset_for_organization(
+                organization=(
+                    request.api_organization
+                ),
+            )
+        )
+
+        try:
+            pipeline_result = (
+                APIQueryPipelineService
+                .execute(
+                    queryset,
+                    request,
+                    allowed_filters={
+                        "customer_id": {
+                            "field":
+                                "customer",
+                            "parser":
+                                "object_id",
+                        },
+                        "warehouse_id": {
+                            "field":
+                                "warehouse",
+                            "parser":
+                                "object_id",
+                        },
+                        "status": {
+                            "field":
+                                "status",
+                        },
+                    },
+                    search_fields=[
+                        "so_number",
+                        "customer__code",
+                        "customer__name",
+                        "warehouse__code",
+                        "warehouse__name",
+                        "notes",
+                    ],
+                    allowed_sort_fields={
+                        "so_number":
+                            "so_number",
+                        "status":
+                            "status",
+                        "order_date":
+                            "order_date",
+                        "expected_delivery_date": (
+                            "expected_delivery_date"
+                        ),
+                        "subtotal":
+                            "subtotal",
+                        "tax_amount":
+                            "tax_amount",
+                        "discount_amount":
+                            "discount_amount",
+                        "total_amount":
+                            "total_amount",
+                        "created_at":
+                            "created_at",
+                        "updated_at":
+                            "updated_at",
+                    },
+                    default_sort=[
+                        "-created_at",
+                    ],
+                    stable_sort_field="id",
+                    default_page_size=25,
+                    maximum_page_size=100,
+                )
+            )
+
+        except APIQueryPipelineError as exc:
+            return (
+                APIResponseService
+                .validation_error(
+                    message=exc.message,
+                    details={
+                        "component":
+                            exc.component,
+                        "fields":
+                            exc.details,
+                    },
+                    request=request,
+                )
+            )
+
+        return (
+            APIResponseService
+            .success(
+                data={
+                    "sales_orders": (
+                        SalesOrderAPISerializer
+                        .serialize_many(
+                            pipeline_result[
+                                "items"
+                            ]
+                        )
+                    ),
+                    "pagination": (
+                        pipeline_result[
+                            "pagination"
+                        ]
+                    ),
+                    "query": (
+                        pipeline_result[
+                            "query"
+                        ]
+                    ),
+                },
+                message=(
+                    "Sales orders retrieved "
+                    "successfully."
+                ),
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # POST: CREATE SALES ORDER
+    # ==================================================
+
+    if request.method == "POST":
+
+        if not (
+            AuthorizationService
+            .has_permission(
+                request.api_user,
+                "sales_orders.create",
+            )
+        ):
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        content_type = (
+            request.content_type
+            or
+            ""
+        ).lower()
+
+        if (
+            "application/json"
+            not in content_type
+        ):
+            return (
+                APIResponseService
+                .validation_error(
+                    message=(
+                        "Content-Type must be "
+                        "application/json."
+                    ),
+                    details={
+                        "content_type": [
+                            (
+                                "Send the request body "
+                                "as JSON."
+                            ),
+                        ],
+                    },
+                    request=request,
+                )
+            )
+
+        try:
+            payload = json.loads(
+                request.body
+                or
+                b"{}"
+            )
+
+        except (
+            json.JSONDecodeError,
+            UnicodeDecodeError,
+        ):
+            return (
+                APIResponseService
+                .validation_error(
+                    message="Malformed JSON body.",
+                    details={
+                        "body": [
+                            (
+                                "Request body must "
+                                "contain valid JSON."
+                            ),
+                        ],
+                    },
+                    request=request,
+                )
+            )
+
+        try:
+            sales_order = (
+                SalesOrderAPIService
+                .create_sales_order(
+                    user=request.api_user,
+                    organization=(
+                        request.api_organization
+                    ),
+                    payload=payload,
+                )
+            )
+
+        except SalesOrderAPIValidationError as exc:
+            return (
+                APIResponseService
+                .validation_error(
+                    message=exc.message,
+                    details=exc.details,
+                    request=request,
+                )
+            )
+
+        except PermissionError:
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        return (
+            APIResponseService
+            .success(
+                data={
+                    "sales_order": (
+                        SalesOrderAPISerializer
+                        .serialize_detail(
+                            sales_order
+                        )
+                    ),
+                },
+                message=(
+                    "Sales order created "
+                    "successfully."
+                ),
+                status=201,
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # METHOD RESTRICTION
+    # ==================================================
+
+    return (
+        APIResponseService
+        .method_not_allowed(
+            message=(
+                "Use GET to list or POST "
+                "to create sales orders."
+            ),
+            request=request,
+        )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="sales_orders.detail",
+    limit=120,
+    window_seconds=60,
+)
+def sales_order_detail_api(
+    request,
+    sales_order_id,
+):
+    # ==================================================
+    # GET: SALES ORDER DETAIL
+    # ==================================================
+
+    if request.method == "GET":
+
+        if not (
+            AuthorizationService
+            .has_permission(
+                request.api_user,
+                "sales_orders.read",
+            )
+        ):
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        try:
+            sales_order = (
+                SalesOrderAPIService
+                .get_sales_order(
+                    organization=(
+                        request.api_organization
+                    ),
+                    sales_order_id=(
+                        sales_order_id
+                    ),
+                )
+            )
+
+        except SalesOrderAPIValidationError as exc:
+            return (
+                APIResponseService
+                .validation_error(
+                    message=exc.message,
+                    details=exc.details,
+                    request=request,
+                )
+            )
+
+        except LookupError:
+            return (
+                APIResponseService
+                .not_found(
+                    message=(
+                        "Sales order not found."
+                    ),
+                    request=request,
+                )
+            )
+
+        return (
+            APIResponseService
+            .success(
+                data={
+                    "sales_order": (
+                        SalesOrderAPISerializer
+                        .serialize_detail(
+                            sales_order
+                        )
+                    ),
+                },
+                message=(
+                    "Sales order retrieved "
+                    "successfully."
+                ),
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # PUT: UPDATE DRAFT SALES ORDER
+    # ==================================================
+
+    if request.method == "PUT":
+
+        if not (
+            AuthorizationService
+            .has_permission(
+                request.api_user,
+                "sales_orders.update",
+            )
+        ):
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        content_type = (
+            request.content_type
+            or
+            ""
+        ).lower()
+
+        if (
+            "application/json"
+            not in content_type
+        ):
+            return (
+                APIResponseService
+                .validation_error(
+                    message=(
+                        "Content-Type must be "
+                        "application/json."
+                    ),
+                    details={
+                        "content_type": [
+                            (
+                                "Send the request body "
+                                "as JSON."
+                            ),
+                        ],
+                    },
+                    request=request,
+                )
+            )
+
+        try:
+            payload = json.loads(
+                request.body
+                or
+                b"{}"
+            )
+
+        except (
+            json.JSONDecodeError,
+            UnicodeDecodeError,
+        ):
+            return (
+                APIResponseService
+                .validation_error(
+                    message="Malformed JSON body.",
+                    details={
+                        "body": [
+                            (
+                                "Request body must "
+                                "contain valid JSON."
+                            ),
+                        ],
+                    },
+                    request=request,
+                )
+            )
+
+        try:
+            sales_order = (
+                SalesOrderAPIService
+                .update_sales_order(
+                    user=request.api_user,
+                    organization=(
+                        request.api_organization
+                    ),
+                    sales_order_id=(
+                        sales_order_id
+                    ),
+                    payload=payload,
+                )
+            )
+
+        except SalesOrderAPIValidationError as exc:
+            return (
+                APIResponseService
+                .validation_error(
+                    message=exc.message,
+                    details=exc.details,
+                    request=request,
+                )
+            )
+
+        except LookupError:
+            return (
+                APIResponseService
+                .not_found(
+                    message=(
+                        "Sales order not found."
+                    ),
+                    request=request,
+                )
+            )
+
+        except SalesOrderAPIStateError as exc:
+            return (
+                APIResponseService
+                .unprocessable_entity(
+                    message=exc.message,
+                    details=exc.details,
+                    request=request,
+                )
+            )
+
+        except PermissionError:
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        return (
+            APIResponseService
+            .success(
+                data={
+                    "sales_order": (
+                        SalesOrderAPISerializer
+                        .serialize_detail(
+                            sales_order
+                        )
+                    ),
+                },
+                message=(
+                    "Sales order updated "
+                    "successfully."
+                ),
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # METHOD RESTRICTION
+    # ==================================================
+
+    return (
+        APIResponseService
+        .method_not_allowed(
+            message=(
+                "Use GET to retrieve or PUT "
+                "to update a sales order."
+            ),
+            request=request,
+        )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="sales_orders.confirm",
+    limit=60,
+    window_seconds=60,
+)
+def sales_order_confirm_api(
+    request,
+    sales_order_id,
+):
+    if request.method != "POST":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use POST to confirm "
+                    "a sales order."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "sales_orders.update",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    try:
+        sales_order = (
+            SalesOrderAPIService
+            .confirm_sales_order(
+                user=request.api_user,
+                organization=(
+                    request.api_organization
+                ),
+                sales_order_id=(
+                    sales_order_id
+                ),
+            )
+        )
+
+    except SalesOrderAPIValidationError as exc:
+        return (
+            APIResponseService
+            .validation_error(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except LookupError:
+        return (
+            APIResponseService
+            .not_found(
+                message=(
+                    "Sales order not found."
+                ),
+                request=request,
+            )
+        )
+
+    except SalesOrderAPIStateError as exc:
+        return (
+            APIResponseService
+            .unprocessable_entity(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except PermissionError:
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "sales_order": (
+                    SalesOrderAPISerializer
+                    .serialize_detail(
+                        sales_order
+                    )
+                ),
+            },
+            message=(
+                "Sales order confirmed "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+
+@api_login_required
+@api_rate_limit(
+    scope="sales_orders.cancel",
+    limit=60,
+    window_seconds=60,
+)
+def sales_order_cancel_api(
+    request,
+    sales_order_id,
+):
+    if request.method != "POST":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use POST to cancel "
+                    "a sales order."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "sales_orders.cancel",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    try:
+        sales_order = (
+            SalesOrderAPIService
+            .cancel_sales_order(
+                user=request.api_user,
+                organization=(
+                    request.api_organization
+                ),
+                sales_order_id=(
+                    sales_order_id
+                ),
+            )
+        )
+
+    except SalesOrderAPIValidationError as exc:
+        return (
+            APIResponseService
+            .validation_error(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except LookupError:
+        return (
+            APIResponseService
+            .not_found(
+                message=(
+                    "Sales order not found."
+                ),
+                request=request,
+            )
+        )
+
+    except SalesOrderAPIStateError as exc:
+        return (
+            APIResponseService
+            .unprocessable_entity(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except PermissionError:
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "sales_order": (
+                    SalesOrderAPISerializer
+                    .serialize_detail(
+                        sales_order
+                    )
+                ),
+            },
+            message=(
+                "Sales order cancelled "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="sales_orders.fulfill",
+    limit=60,
+    window_seconds=60,
+)
+def sales_order_fulfill_api(
+    request,
+    sales_order_id,
+):
+    if request.method != "POST":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use POST to fulfil "
+                    "a sales order."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "sales_orders.fulfill",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    content_type = (
+        request.content_type
+        or
+        ""
+    ).lower()
+
+    if (
+        "application/json"
+        not in content_type
+    ):
+        return (
+            APIResponseService
+            .validation_error(
+                message=(
+                    "Content-Type must be "
+                    "application/json."
+                ),
+                details={
+                    "content_type": [
+                        (
+                            "Send the request body "
+                            "as JSON."
+                        ),
+                    ],
+                },
+                request=request,
+            )
+        )
+
+    try:
+        payload = json.loads(
+            request.body
+            or
+            b"{}"
+        )
+
+    except (
+        json.JSONDecodeError,
+        UnicodeDecodeError,
+    ):
+        return (
+            APIResponseService
+            .validation_error(
+                message="Malformed JSON body.",
+                details={
+                    "body": [
+                        (
+                            "Request body must "
+                            "contain valid JSON."
+                        ),
+                    ],
+                },
+                request=request,
+            )
+        )
+
+    try:
+        sales_order = (
+            SalesOrderAPIService
+            .fulfill_sales_order(
+                user=request.api_user,
+                organization=(
+                    request.api_organization
+                ),
+                sales_order_id=(
+                    sales_order_id
+                ),
+                payload=payload,
+            )
+        )
+
+    except SalesOrderAPIValidationError as exc:
+        return (
+            APIResponseService
+            .validation_error(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except LookupError:
+        return (
+            APIResponseService
+            .not_found(
+                message=(
+                    "Sales order not found."
+                ),
+                request=request,
+            )
+        )
+
+    except SalesOrderAPIStateError as exc:
+        return (
+            APIResponseService
+            .unprocessable_entity(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except PermissionError:
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "sales_order": (
+                    SalesOrderAPISerializer
+                    .serialize_detail(
+                        sales_order
+                    )
+                ),
+            },
+            message=(
+                "Sales order fulfilled "
                 "successfully."
             ),
             request=request,

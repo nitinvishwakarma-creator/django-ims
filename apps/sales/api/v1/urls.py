@@ -40,4 +40,45 @@ urlpatterns = [
         views.customer_detail_api,
         name="customer_detail",
     ),
+    path(
+        "sales-orders/",
+        views.sales_order_collection_api,
+        name="sales_order_collection",
+    ),
+
+    path(
+        (
+            "sales-orders/"
+            "<str:sales_order_id>/confirm/"
+        ),
+        views.sales_order_confirm_api,
+        name="sales_order_confirm",
+    ),
+
+    path(
+        (
+            "sales-orders/"
+            "<str:sales_order_id>/cancel/"
+        ),
+        views.sales_order_cancel_api,
+        name="sales_order_cancel",
+    ),
+
+    path(
+        (
+            "sales-orders/"
+            "<str:sales_order_id>/fulfill/"
+        ),
+        views.sales_order_fulfill_api,
+        name="sales_order_fulfill",
+    ),
+
+    path(
+        (
+            "sales-orders/"
+            "<str:sales_order_id>/"
+        ),
+        views.sales_order_detail_api,
+        name="sales_order_detail",
+    ),
 ]

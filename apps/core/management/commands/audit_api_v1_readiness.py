@@ -461,6 +461,53 @@ class Command(
         )
 
         check(
+            "Sales Order collection route available",
+            route_exists(
+                "/api/v1/sales-orders/"
+            ),
+        )
+
+        check(
+            "Sales Order detail route available",
+            route_exists(
+                (
+                    "/api/v1/sales-orders/"
+                    "audit-sales-order-id/"
+                )
+            ),
+        )
+
+        check(
+            "Sales Order confirmation route available",
+            route_exists(
+                (
+                    "/api/v1/sales-orders/"
+                    "audit-sales-order-id/confirm/"
+                )
+            ),
+        )
+
+        check(
+            "Sales Order cancellation route available",
+            route_exists(
+                (
+                    "/api/v1/sales-orders/"
+                    "audit-sales-order-id/cancel/"
+                )
+            ),
+        )
+
+        check(
+            "Sales Order fulfilment route available",
+            route_exists(
+                (
+                    "/api/v1/sales-orders/"
+                    "audit-sales-order-id/fulfill/"
+                )
+            ),
+        )
+
+        check(
             "Supplier collection route available",
             route_exists(
                 "/api/v1/suppliers/"
@@ -843,6 +890,13 @@ class Command(
                 )
             )
 
+            sales_order_endpoints = (
+                manifest_endpoints.get(
+                    "sales_orders",
+                    {},
+                )
+            )
+
             supplier_endpoints = (
                 manifest_endpoints.get(
                     "suppliers",
@@ -876,6 +930,78 @@ class Command(
                     "stock_transfers",
                     {},
                 )
+            )
+            check(
+                (
+                    "Discovery exposes Sales Order "
+                    "management endpoints"
+                ),
+                (
+                    sales_order_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/sales-orders/"
+                    and
+                    sales_order_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    sales_order_endpoints
+                    .get(
+                        "confirm",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    sales_order_endpoints
+                    .get(
+                        "cancel",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    sales_order_endpoints
+                    .get(
+                        "fulfill",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    sales_order_endpoints
+                    .get(
+                        "fulfill",
+                        {},
+                    )
+                    .get(
+                        "supports_partial_fulfillment"
+                    )
+                    is True
+                ),
             )
             check(
                 (

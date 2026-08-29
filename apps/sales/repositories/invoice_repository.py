@@ -6,6 +6,20 @@ from apps.sales.models import Invoice
 class InvoiceRepository:
 
     @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        """
+        Return a tenant-scoped Invoice queryset
+        for API filtering, searching, sorting,
+        and pagination.
+        """
+
+        return Invoice.objects(
+            organization=organization,
+        )
+    @staticmethod
     def create_invoice(
         *,
         organization,
@@ -98,10 +112,15 @@ class InvoiceRepository:
         *,
         organization,
     ):
-        return Invoice.objects(
-            organization=organization,
-        ).order_by(
-            "-created_at"
+        return (
+            InvoiceRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod

@@ -17,6 +17,17 @@ from apps.core.services.api_response_service import (
 from apps.sales.api.v1.serializers import (
     CustomerAPISerializer,
     SalesOrderAPISerializer,
+    BankAccountLookupAPISerializer,
+    CustomerPaymentAPISerializer,
+    InvoiceAPISerializer,
+)
+from apps.sales.repositories.invoice_repository import (
+    InvoiceRepository,
+)
+from apps.sales.services.invoice_api_service import (
+    InvoiceAPIService,
+    InvoiceAPIStateError,
+    InvoiceAPIValidationError,
 )
 from apps.sales.repositories.sales_order_repository import (
     SalesOrderRepository,
@@ -1688,6 +1699,837 @@ def sales_order_fulfill_api(
                 "Sales order fulfilled "
                 "successfully."
             ),
+            request=request,
+        )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="invoice_bank_accounts.list",
+    limit=120,
+    window_seconds=60,
+)
+def invoice_bank_account_list_api(
+    request,
+):
+    if request.method != "GET":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use GET to list active "
+                    "payment accounts."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "invoices.record_payment",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    bank_accounts = (
+        InvoiceAPIService
+        .list_active_bank_accounts(
+            organization=(
+                request.api_organization
+            ),
+        )
+    )
+
+    serialized_bank_accounts = (
+        BankAccountLookupAPISerializer
+        .serialize_many(
+            bank_accounts
+        )
+    )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "bank_accounts": (
+                    serialized_bank_accounts
+                ),
+                "count":
+                    len(
+                        serialized_bank_accounts
+                    ),
+            },
+            message=(
+                "Payment accounts retrieved "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+
+@api_login_required
+@api_rate_limit(
+    scope="invoices.collection",
+    limit=120,
+    window_seconds=60,
+)
+def invoice_collection_api(
+    request,
+):
+    if request.method == "GET":
+
+        if not (
+            AuthorizationService
+            .has_permission(
+                request.api_user,
+                "invoices.read",
+            )
+        ):
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        queryset = (
+            InvoiceRepository
+            .queryset_for_organization(
+                organization=(
+                    request.api_organization
+                ),
+            )
+        )
+
+        try:
+            pipeline_result = (
+                APIQueryPipelineService
+                .execute(
+                    queryset,
+                    request,
+                    allowed_filters={
+                        "customer_id": {
+                            "field":
+                                "customer",
+                            "parser":
+                                "object_id",
+                        },
+                        "sales_order_id": {
+                            "field":
+                                "sales_order",
+                            "parser":
+                                "object_id",
+                        },
+                        "status": {
+                            "field":
+                                "status",
+                        },
+                    },
+                    search_fields=[
+                        "invoice_number",
+                        "sales_order__so_number",
+                        "customer__code",
+                        "customer__name",
+                        "billing_name",
+                        "customer_gstin",
+                        "notes",
+                    ],
+                    allowed_sort_fields={
+                        "invoice_number":
+                            "invoice_number",
+                        "status":
+                            "status",
+                        "invoice_date":
+                            "invoice_date",
+                        "due_date":
+                            "due_date",
+                        "total_amount":
+                            "total_amount",
+                        "amount_paid":
+                            "amount_paid",
+                        "balance_due":
+                            "balance_due",
+                        "created_at":
+                            "created_at",
+                        "updated_at":
+                            "updated_at",
+                    },
+                    default_sort=[
+                        "-created_at",
+                    ],
+                    stable_sort_field="id",
+                    default_page_size=25,
+                    maximum_page_size=100,
+                )
+            )
+
+        except APIQueryPipelineError as exc:
+            return (
+                APIResponseService
+                .validation_error(
+                    message=exc.message,
+                    details={
+                        "component":
+                            exc.component,
+                        "fields":
+                            exc.details,
+                    },
+                    request=request,
+                )
+            )
+
+        return (
+            APIResponseService
+            .success(
+                data={
+                    "invoices": (
+                        InvoiceAPISerializer
+                        .serialize_many(
+                            pipeline_result[
+                                "items"
+                            ]
+                        )
+                    ),
+                    "pagination": (
+                        pipeline_result[
+                            "pagination"
+                        ]
+                    ),
+                    "query": (
+                        pipeline_result[
+                            "query"
+                        ]
+                    ),
+                },
+                message=(
+                    "Invoices retrieved "
+                    "successfully."
+                ),
+                request=request,
+            )
+        )
+
+    if request.method == "POST":
+
+        if not (
+            AuthorizationService
+            .has_permission(
+                request.api_user,
+                "invoices.create",
+            )
+        ):
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        content_type = (
+            request.content_type
+            or
+            ""
+        ).lower()
+
+        if (
+            "application/json"
+            not in content_type
+        ):
+            return (
+                APIResponseService
+                .validation_error(
+                    message=(
+                        "Content-Type must be "
+                        "application/json."
+                    ),
+                    details={
+                        "content_type": [
+                            (
+                                "Send the request body "
+                                "as JSON."
+                            ),
+                        ],
+                    },
+                    request=request,
+                )
+            )
+
+        try:
+            payload = json.loads(
+                request.body
+                or
+                b"{}"
+            )
+
+        except (
+            json.JSONDecodeError,
+            UnicodeDecodeError,
+        ):
+            return (
+                APIResponseService
+                .validation_error(
+                    message="Malformed JSON body.",
+                    details={
+                        "body": [
+                            (
+                                "Request body must "
+                                "contain valid JSON."
+                            ),
+                        ],
+                    },
+                    request=request,
+                )
+            )
+
+        try:
+            invoice = (
+                InvoiceAPIService
+                .create_invoice(
+                    user=request.api_user,
+                    organization=(
+                        request.api_organization
+                    ),
+                    payload=payload,
+                )
+            )
+
+        except InvoiceAPIValidationError as exc:
+            return (
+                APIResponseService
+                .validation_error(
+                    message=exc.message,
+                    details=exc.details,
+                    request=request,
+                )
+            )
+
+        except InvoiceAPIStateError as exc:
+            return (
+                APIResponseService
+                .unprocessable_entity(
+                    message=exc.message,
+                    details=exc.details,
+                    request=request,
+                )
+            )
+
+        except PermissionError:
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        return (
+            APIResponseService
+            .success(
+                data={
+                    "invoice": (
+                        InvoiceAPISerializer
+                        .serialize_detail(
+                            invoice
+                        )
+                    ),
+                },
+                message=(
+                    "Invoice created "
+                    "successfully."
+                ),
+                status=201,
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .method_not_allowed(
+            message=(
+                "Use GET to list or POST "
+                "to create invoices."
+            ),
+            request=request,
+        )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="invoices.detail",
+    limit=120,
+    window_seconds=60,
+)
+def invoice_detail_api(
+    request,
+    invoice_id,
+):
+    if request.method != "GET":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use GET to retrieve "
+                    "an invoice."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "invoices.read",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    try:
+        invoice = (
+            InvoiceAPIService
+            .get_invoice(
+                organization=(
+                    request.api_organization
+                ),
+                invoice_id=invoice_id,
+            )
+        )
+
+    except InvoiceAPIValidationError as exc:
+        return (
+            APIResponseService
+            .validation_error(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except LookupError:
+        return (
+            APIResponseService
+            .not_found(
+                message="Invoice not found.",
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "invoice": (
+                    InvoiceAPISerializer
+                    .serialize_detail(
+                        invoice
+                    )
+                ),
+            },
+            message=(
+                "Invoice retrieved "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+
+@api_login_required
+@api_rate_limit(
+    scope="invoices.issue",
+    limit=60,
+    window_seconds=60,
+)
+def invoice_issue_api(
+    request,
+    invoice_id,
+):
+    if request.method != "POST":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use POST to issue "
+                    "an invoice."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "invoices.issue",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    try:
+        invoice = (
+            InvoiceAPIService
+            .issue_invoice(
+                user=request.api_user,
+                organization=(
+                    request.api_organization
+                ),
+                invoice_id=invoice_id,
+            )
+        )
+
+    except InvoiceAPIValidationError as exc:
+        return (
+            APIResponseService
+            .validation_error(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except LookupError:
+        return (
+            APIResponseService
+            .not_found(
+                message="Invoice not found.",
+                request=request,
+            )
+        )
+
+    except InvoiceAPIStateError as exc:
+        return (
+            APIResponseService
+            .unprocessable_entity(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except PermissionError:
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "invoice": (
+                    InvoiceAPISerializer
+                    .serialize_detail(
+                        invoice
+                    )
+                ),
+            },
+            message=(
+                "Invoice issued "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="invoices.cancel",
+    limit=60,
+    window_seconds=60,
+)
+def invoice_cancel_api(
+    request,
+    invoice_id,
+):
+    if request.method != "POST":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use POST to cancel "
+                    "an invoice."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "invoices.cancel",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    try:
+        invoice = (
+            InvoiceAPIService
+            .cancel_invoice(
+                user=request.api_user,
+                organization=(
+                    request.api_organization
+                ),
+                invoice_id=invoice_id,
+            )
+        )
+
+    except InvoiceAPIValidationError as exc:
+        return (
+            APIResponseService
+            .validation_error(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except LookupError:
+        return (
+            APIResponseService
+            .not_found(
+                message="Invoice not found.",
+                request=request,
+            )
+        )
+
+    except InvoiceAPIStateError as exc:
+        return (
+            APIResponseService
+            .unprocessable_entity(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except PermissionError:
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "invoice": (
+                    InvoiceAPISerializer
+                    .serialize_detail(
+                        invoice
+                    )
+                ),
+            },
+            message=(
+                "Invoice cancelled "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+
+@api_login_required
+@api_rate_limit(
+    scope="invoices.record_payment",
+    limit=60,
+    window_seconds=60,
+)
+def invoice_record_payment_api(
+    request,
+    invoice_id,
+):
+    if request.method != "POST":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use POST to record "
+                    "an Invoice payment."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "invoices.record_payment",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    content_type = (
+        request.content_type
+        or
+        ""
+    ).lower()
+
+    if (
+        "application/json"
+        not in content_type
+    ):
+        return (
+            APIResponseService
+            .validation_error(
+                message=(
+                    "Content-Type must be "
+                    "application/json."
+                ),
+                details={
+                    "content_type": [
+                        (
+                            "Send the request body "
+                            "as JSON."
+                        ),
+                    ],
+                },
+                request=request,
+            )
+        )
+
+    try:
+        payload = json.loads(
+            request.body
+            or
+            b"{}"
+        )
+
+    except (
+        json.JSONDecodeError,
+        UnicodeDecodeError,
+    ):
+        return (
+            APIResponseService
+            .validation_error(
+                message="Malformed JSON body.",
+                details={
+                    "body": [
+                        (
+                            "Request body must "
+                            "contain valid JSON."
+                        ),
+                    ],
+                },
+                request=request,
+            )
+        )
+
+    try:
+        result = (
+            InvoiceAPIService
+            .record_payment(
+                user=request.api_user,
+                organization=(
+                    request.api_organization
+                ),
+                invoice_id=invoice_id,
+                payload=payload,
+            )
+        )
+
+    except InvoiceAPIValidationError as exc:
+        return (
+            APIResponseService
+            .validation_error(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except LookupError:
+        return (
+            APIResponseService
+            .not_found(
+                message="Invoice not found.",
+                request=request,
+            )
+        )
+
+    except InvoiceAPIStateError as exc:
+        return (
+            APIResponseService
+            .unprocessable_entity(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except PermissionError:
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "invoice": (
+                    InvoiceAPISerializer
+                    .serialize_detail(
+                        result["invoice"]
+                    )
+                ),
+                "payment": (
+                    CustomerPaymentAPISerializer
+                    .serialize_detail(
+                        result["payment"]
+                    )
+                ),
+            },
+            message=(
+                "Invoice payment recorded "
+                "successfully."
+            ),
+            status=201,
             request=request,
         )
     )

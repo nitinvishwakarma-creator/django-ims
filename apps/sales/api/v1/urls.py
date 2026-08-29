@@ -81,4 +81,51 @@ urlpatterns = [
         views.sales_order_detail_api,
         name="sales_order_detail",
     ),
+    path(
+        "invoice-bank-accounts/",
+        views.invoice_bank_account_list_api,
+        name="invoice_bank_account_list",
+    ),
+
+    path(
+        "invoices/",
+        views.invoice_collection_api,
+        name="invoice_collection",
+    ),
+
+    path(
+        (
+            "invoices/"
+            "<str:invoice_id>/issue/"
+        ),
+        views.invoice_issue_api,
+        name="invoice_issue",
+    ),
+
+    path(
+        (
+            "invoices/"
+            "<str:invoice_id>/cancel/"
+        ),
+        views.invoice_cancel_api,
+        name="invoice_cancel",
+    ),
+
+    path(
+        (
+            "invoices/"
+            "<str:invoice_id>/record-payment/"
+        ),
+        views.invoice_record_payment_api,
+        name="invoice_record_payment",
+    ),
+
+    path(
+        (
+            "invoices/"
+            "<str:invoice_id>/"
+        ),
+        views.invoice_detail_api,
+        name="invoice_detail",
+    ),
 ]

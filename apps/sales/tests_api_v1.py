@@ -34,6 +34,26 @@ from apps.organizations.api_context_service import (
 from apps.sales.api.v1.serializers import (
     CustomerAPISerializer,
     SalesOrderAPISerializer,
+    BankAccountLookupAPISerializer,
+    CustomerPaymentAPISerializer,
+    InvoiceAPISerializer,
+)
+from apps.finance.repositories.bank_account_repository import (
+    BankAccountRepository,
+)
+from apps.sales.repositories.invoice_repository import (
+    InvoiceRepository,
+)
+from apps.sales.services.invoice_api_service import (
+    InvoiceAPIService,
+    InvoiceAPIStateError,
+    InvoiceAPIValidationError,
+)
+from apps.sales.services.invoice_service import (
+    InvoiceService,
+)
+from apps.sales.services.payment_service import (
+    PaymentService,
 )
 from apps.sales.repositories.customer_repository import (
     CustomerRepository,
@@ -2250,6 +2270,1083 @@ class SalesOrderAPIV1RegressionTestCase(
     ):
         response = self.client.delete(
             self.SALES_ORDERS_URL
+        )
+
+        self.assert_error_contract(
+            response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+class InvoiceAPIV1RegressionTestCase(
+    SimpleTestCase
+):
+
+    INVOICES_URL = (
+        "/api/v1/invoices/"
+    )
+
+    BANK_ACCOUNTS_URL = (
+        "/api/v1/invoice-bank-accounts/"
+    )
+
+    def setUp(self):
+        now = datetime.utcnow()
+
+        self.organization = SimpleNamespace(
+            id=ObjectId(),
+            name="Invoice Organization",
+            email="invoices@example.com",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.user = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            email="admin@example.com",
+            first_name="System",
+            last_name="Administrator",
+            is_active=True,
+            is_authenticated=True,
+            is_anonymous=False,
+        )
+
+        self.customer = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            code="CUST-INV-001",
+            name="Invoice Customer",
+            email="customer@example.com",
+            phone="9999999999",
+            gstin="27ABCDE1234F1Z5",
+            billing_address="Billing Address",
+            shipping_address="Shipping Address",
+            city="Mumbai",
+            state="Maharashtra",
+            country="India",
+            pincode="400001",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.warehouse = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            code="MAIN-001",
+            name="Main Warehouse",
+            city="Mumbai",
+            state="Maharashtra",
+            country="India",
+            is_active=True,
+        )
+
+        self.product = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            sku="PHONE-INV-001",
+            name="Invoice Phone",
+            unit="piece",
+            is_active=True,
+        )
+
+        self.sales_order_item = (
+            SimpleNamespace(
+                product=self.product,
+                quantity=Decimal("2.00"),
+                fulfilled_quantity=(
+                    Decimal("2.00")
+                ),
+                unit_price=Decimal("100.00"),
+                tax_rate=Decimal("18.00"),
+                discount=Decimal("10.00"),
+                line_subtotal=(
+                    Decimal("200.00")
+                ),
+                line_tax=Decimal("34.20"),
+                line_total=Decimal("224.20"),
+            )
+        )
+
+        self.sales_order = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            so_number="SO-INVOICE-001",
+            customer=self.customer,
+            warehouse=self.warehouse,
+            status="FULFILLED",
+            items=[
+                self.sales_order_item,
+            ],
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.invoice_item = (
+            SimpleNamespace(
+                product=self.product,
+                quantity=Decimal("2.00"),
+                unit_price=Decimal("100.00"),
+                tax_rate=Decimal("18.00"),
+                discount=Decimal("10.00"),
+                line_subtotal=(
+                    Decimal("200.00")
+                ),
+                line_tax=Decimal("34.20"),
+                line_total=Decimal("224.20"),
+            )
+        )
+
+        self.invoice = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            invoice_number="INV-TEST000001",
+            sales_order=self.sales_order,
+            customer=self.customer,
+            status="DRAFT",
+            invoice_date=now,
+            due_date=now,
+            items=[
+                self.invoice_item,
+            ],
+            subtotal=Decimal("200.00"),
+            tax_amount=Decimal("34.20"),
+            discount_amount=Decimal("10.00"),
+            total_amount=Decimal("224.20"),
+            amount_paid=Decimal("0.00"),
+            balance_due=Decimal("224.20"),
+            billing_name=self.customer.name,
+            billing_address=(
+                self.customer.billing_address
+            ),
+            billing_city=self.customer.city,
+            billing_state=self.customer.state,
+            billing_country=(
+                self.customer.country
+            ),
+            billing_pincode=(
+                self.customer.pincode
+            ),
+            customer_gstin=(
+                self.customer.gstin
+            ),
+            notes="Regression invoice.",
+            created_by=self.user,
+            issued_at=None,
+            paid_at=None,
+            cancelled_at=None,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.bank_account = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            account_name="Main Bank",
+            account_type="BANK",
+            bank_name="Test Bank",
+            account_number="1234567890",
+            ifsc_code="TEST0000001",
+            currency="INR",
+            current_balance=Decimal("1000.00"),
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.payment_allocation = (
+            SimpleNamespace(
+                invoice=self.invoice,
+                amount=Decimal("100.00"),
+            )
+        )
+
+        self.payment = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            payment_number="PAY-TEST000001",
+            customer=self.customer,
+            payment_date=now,
+            amount=Decimal("100.00"),
+            payment_method="BANK_TRANSFER",
+            bank_account=self.bank_account,
+            reference_number="UTR-001",
+            allocations=[
+                self.payment_allocation,
+            ],
+            notes="Regression payment.",
+            created_by=self.user,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.organization_context = {
+            "user":
+                self.user,
+            "organization":
+                self.organization,
+        }
+
+        self.patchers = [
+            patch.object(
+                ApplicationLoggingService,
+                "log",
+                return_value=None,
+            ),
+            patch.object(
+                MongoDBErrorLoggingService,
+                "log_exception",
+                return_value=None,
+            ),
+            patch.object(
+                APIOrganizationContextService,
+                "resolve",
+                return_value=(
+                    self.organization_context
+                ),
+            ),
+            patch.object(
+                AuthorizationService,
+                "has_permission",
+                return_value=True,
+            ),
+            patch.object(
+                APIRateLimitService,
+                "check",
+                return_value={
+                    "allowed": True,
+                },
+            ),
+            patch.object(
+                APIRateLimitService,
+                "add_headers",
+                side_effect=(
+                    lambda response, result:
+                    response
+                ),
+            ),
+        ]
+
+        for patcher in self.patchers:
+            patcher.start()
+
+        self.client = Client(
+            raise_request_exception=False
+        )
+
+    def tearDown(self):
+        for patcher in reversed(
+            self.patchers
+        ):
+            patcher.stop()
+
+    def detail_url(self):
+        return (
+            f"{self.INVOICES_URL}"
+            f"{self.invoice.id}/"
+        )
+
+    def issue_url(self):
+        return (
+            f"{self.INVOICES_URL}"
+            f"{self.invoice.id}/issue/"
+        )
+
+    def cancel_url(self):
+        return (
+            f"{self.INVOICES_URL}"
+            f"{self.invoice.id}/cancel/"
+        )
+
+    def payment_url(self):
+        return (
+            f"{self.INVOICES_URL}"
+            f"{self.invoice.id}/"
+            "record-payment/"
+        )
+
+    def assert_success_contract(
+        self,
+        response,
+        expected_status=200,
+    ):
+        body = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+        )
+
+        self.assertTrue(
+            body["success"]
+        )
+
+        self.assertIn(
+            "data",
+            body,
+        )
+
+        self.assertTrue(
+            body.get(
+                "request_id"
+            )
+        )
+
+        self.assertEqual(
+            response.headers.get(
+                "Cache-Control"
+            ),
+            "no-store",
+        )
+
+        return body
+
+    def assert_error_contract(
+        self,
+        response,
+        expected_status,
+        expected_code,
+    ):
+        body = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+        )
+
+        self.assertFalse(
+            body["success"]
+        )
+
+        self.assertEqual(
+            body["error"]["code"],
+            expected_code,
+        )
+
+        return body
+
+    def test_anonymous_invoice_list_is_rejected(
+        self,
+    ):
+        with patch.object(
+            APIOrganizationContextService,
+            "resolve",
+            side_effect=PermissionError(
+                "Not authenticated."
+            ),
+        ):
+            response = self.client.get(
+                self.INVOICES_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            401,
+            "UNAUTHORIZED",
+        )
+
+    def test_invoice_list_without_permission_is_forbidden(
+        self,
+    ):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.get(
+                self.INVOICES_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+    def test_invoice_list_uses_query_pipeline(
+        self,
+    ):
+        pipeline_result = {
+            "items": [
+                self.invoice,
+            ],
+            "pagination": {
+                "page": 1,
+                "page_size": 25,
+                "total_items": 1,
+                "total_pages": 1,
+                "has_next": False,
+                "has_previous": False,
+            },
+            "query": {
+                "search": None,
+                "filters": {},
+                "sort": [
+                    "-created_at",
+                    "id",
+                ],
+            },
+        }
+
+        with (
+            patch.object(
+                InvoiceRepository,
+                "queryset_for_organization",
+                return_value=object(),
+            ),
+            patch.object(
+                APIQueryPipelineService,
+                "execute",
+                return_value=pipeline_result,
+            ) as pipeline_mock,
+        ):
+            response = self.client.get(
+                (
+                    f"{self.INVOICES_URL}"
+                    "?status=DRAFT"
+                )
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["invoices"][0][
+                "invoice_number"
+            ],
+            self.invoice.invoice_number,
+        )
+
+        pipeline_mock.assert_called_once()
+
+    def test_invoice_list_query_error_uses_contract(
+        self,
+    ):
+        pipeline_error = (
+            APIQueryPipelineError(
+                component="filtering",
+                message="Invalid filter.",
+                details={
+                    "customer_id": [
+                        "Invalid identifier.",
+                    ],
+                },
+            )
+        )
+
+        with (
+            patch.object(
+                InvoiceRepository,
+                "queryset_for_organization",
+                return_value=object(),
+            ),
+            patch.object(
+                APIQueryPipelineService,
+                "execute",
+                side_effect=pipeline_error,
+            ),
+        ):
+            response = self.client.get(
+                (
+                    f"{self.INVOICES_URL}"
+                    "?customer_id=invalid"
+                )
+            )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_create_invoice(
+        self,
+    ):
+        payload = {
+            "sales_order_id":
+                str(
+                    self.sales_order.id
+                ),
+            "invoice_date":
+                "2026-08-29",
+            "due_date":
+                "2026-09-28",
+            "notes":
+                "Regression invoice.",
+        }
+
+        with patch.object(
+            InvoiceAPIService,
+            "create_invoice",
+            return_value=self.invoice,
+        ) as create_mock:
+            response = self.client.post(
+                self.INVOICES_URL,
+                data=json.dumps(
+                    payload
+                ),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response,
+            201,
+        )
+
+        self.assertEqual(
+            body["data"]["invoice"][
+                "total_amount"
+            ],
+            "224.20",
+        )
+
+        create_mock.assert_called_once_with(
+            user=self.user,
+            organization=self.organization,
+            payload=payload,
+        )
+
+    def test_create_invoice_state_error(
+        self,
+    ):
+        with patch.object(
+            InvoiceAPIService,
+            "create_invoice",
+            side_effect=(
+                InvoiceAPIStateError(
+                    message=(
+                        "Invoice can only be "
+                        "generated from a fulfilled "
+                        "Sales Order."
+                    ),
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.INVOICES_URL,
+                data=json.dumps({
+                    "sales_order_id":
+                        str(
+                            self.sales_order.id
+                        ),
+                }),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            422,
+            "UNPROCESSABLE_ENTITY",
+        )
+
+    def test_invoice_detail(
+        self,
+    ):
+        with patch.object(
+            InvoiceAPIService,
+            "get_invoice",
+            return_value=self.invoice,
+        ):
+            response = self.client.get(
+                self.detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["invoice"][
+                "invoice_number"
+            ],
+            self.invoice.invoice_number,
+        )
+
+    def test_missing_invoice_returns_not_found(
+        self,
+    ):
+        with patch.object(
+            InvoiceAPIService,
+            "get_invoice",
+            side_effect=LookupError(
+                "Invoice not found."
+            ),
+        ):
+            response = self.client.get(
+                self.detail_url()
+            )
+
+        self.assert_error_contract(
+            response,
+            404,
+            "NOT_FOUND",
+        )
+
+    def test_malformed_invoice_id_is_validation_error(
+        self,
+    ):
+        response = self.client.get(
+            (
+                f"{self.INVOICES_URL}"
+                "invalid-id/"
+            )
+        )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_active_bank_account_lookup(
+        self,
+    ):
+        with patch.object(
+            InvoiceAPIService,
+            "list_active_bank_accounts",
+            return_value=[
+                self.bank_account,
+            ],
+        ):
+            response = self.client.get(
+                self.BANK_ACCOUNTS_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["count"],
+            1,
+        )
+
+        self.assertEqual(
+            body["data"]["bank_accounts"][0][
+                "masked_account_number"
+            ],
+            "••••7890",
+        )
+
+    def test_issue_invoice(
+        self,
+    ):
+        issued_invoice = SimpleNamespace(
+            **{
+                **vars(
+                    self.invoice
+                ),
+                "status":
+                    "ISSUED",
+                "issued_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            InvoiceAPIService,
+            "issue_invoice",
+            return_value=issued_invoice,
+        ) as issue_mock:
+            response = self.client.post(
+                self.issue_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["invoice"]["status"],
+            "ISSUED",
+        )
+
+        issue_mock.assert_called_once_with(
+            user=self.user,
+            organization=self.organization,
+            invoice_id=str(
+                self.invoice.id
+            ),
+        )
+
+    def test_issue_invoice_state_error(
+        self,
+    ):
+        with patch.object(
+            InvoiceAPIService,
+            "issue_invoice",
+            side_effect=(
+                InvoiceAPIStateError(
+                    message=(
+                        "Only draft invoices "
+                        "can be issued."
+                    ),
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.issue_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            422,
+            "UNPROCESSABLE_ENTITY",
+        )
+
+    def test_cancel_invoice(
+        self,
+    ):
+        cancelled_invoice = SimpleNamespace(
+            **{
+                **vars(
+                    self.invoice
+                ),
+                "status":
+                    "CANCELLED",
+                "cancelled_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            InvoiceAPIService,
+            "cancel_invoice",
+            return_value=cancelled_invoice,
+        ):
+            response = self.client.post(
+                self.cancel_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["invoice"]["status"],
+            "CANCELLED",
+        )
+
+    def test_cancel_invoice_without_permission_is_forbidden(
+        self,
+    ):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.post(
+                self.cancel_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+    def test_record_invoice_payment(
+        self,
+    ):
+        payload = {
+            "amount":
+                "100.00",
+            "payment_method":
+                "BANK_TRANSFER",
+            "bank_account_id":
+                str(
+                    self.bank_account.id
+                ),
+            "payment_date":
+                "2026-08-29",
+            "reference_number":
+                "UTR-001",
+            "notes":
+                "Regression payment.",
+        }
+
+        with patch.object(
+            InvoiceAPIService,
+            "record_payment",
+            return_value={
+                "invoice":
+                    self.invoice,
+                "payment":
+                    self.payment,
+            },
+        ) as payment_mock:
+            response = self.client.post(
+                self.payment_url(),
+                data=json.dumps(
+                    payload
+                ),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response,
+            201,
+        )
+
+        self.assertEqual(
+            body["data"]["payment"][
+                "payment_number"
+            ],
+            self.payment.payment_number,
+        )
+
+        payment_mock.assert_called_once_with(
+            user=self.user,
+            organization=self.organization,
+            invoice_id=str(
+                self.invoice.id
+            ),
+            payload=payload,
+        )
+
+    def test_record_payment_validation_error(
+        self,
+    ):
+        with patch.object(
+            InvoiceAPIService,
+            "record_payment",
+            side_effect=(
+                InvoiceAPIValidationError(
+                    details={
+                        "amount": [
+                            (
+                                "This value must be "
+                                "greater than zero."
+                            ),
+                        ],
+                    },
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.payment_url(),
+                data=json.dumps({
+                    "amount":
+                        "0.00",
+                }),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_invoice_serializer_has_safe_fields(
+        self,
+    ):
+        serialized = (
+            InvoiceAPISerializer
+            .serialize_detail(
+                self.invoice
+            )
+        )
+
+        self.assertEqual(
+            serialized["id"],
+            str(
+                self.invoice.id
+            ),
+        )
+
+        self.assertEqual(
+            serialized["sales_order"]["id"],
+            str(
+                self.sales_order.id
+            ),
+        )
+
+        self.assertEqual(
+            serialized["total_amount"],
+            "224.20",
+        )
+
+        self.assertEqual(
+            serialized["billing"]["name"],
+            self.customer.name,
+        )
+
+        self.assertNotIn(
+            "organization",
+            serialized,
+        )
+
+        self.assertNotIn(
+            "_data",
+            serialized,
+        )
+
+    def test_payment_serializer_masks_bank_account(
+        self,
+    ):
+        serialized = (
+            CustomerPaymentAPISerializer
+            .serialize_detail(
+                self.payment
+            )
+        )
+
+        self.assertEqual(
+            serialized["bank_account"][
+                "masked_account_number"
+            ],
+            "••••7890",
+        )
+
+        self.assertNotIn(
+            "account_number",
+            serialized["bank_account"],
+        )
+
+    def test_service_normalizes_create_payload(
+        self,
+    ):
+        payload = {
+            "sales_order_id":
+                str(
+                    self.sales_order.id
+                ),
+            "invoice_date":
+                "2026-08-29",
+            "due_date":
+                "2026-09-28",
+            "notes":
+                " Test invoice ",
+        }
+
+        with patch.object(
+            SalesOrderRepository,
+            "get_by_id",
+            return_value=self.sales_order,
+        ):
+            values = (
+                InvoiceAPIService
+                .validate_create_payload(
+                    organization=(
+                        self.organization
+                    ),
+                    payload=payload,
+                )
+            )
+
+        self.assertEqual(
+            values["sales_order"],
+            self.sales_order,
+        )
+
+        self.assertEqual(
+            values["notes"],
+            "Test invoice",
+        )
+
+    def test_service_normalizes_payment_payload(
+        self,
+    ):
+        payload = {
+            "amount":
+                "100.00",
+            "payment_method":
+                " bank_transfer ",
+            "bank_account_id":
+                str(
+                    self.bank_account.id
+                ),
+            "reference_number":
+                " UTR-001 ",
+        }
+
+        with patch.object(
+            BankAccountRepository,
+            "get_by_id",
+            return_value=self.bank_account,
+        ):
+            values = (
+                InvoiceAPIService
+                .validate_payment_payload(
+                    organization=(
+                        self.organization
+                    ),
+                    payload=payload,
+                )
+            )
+
+        self.assertEqual(
+            values["amount"],
+            Decimal("100.00"),
+        )
+
+        self.assertEqual(
+            values["payment_method"],
+            "BANK_TRANSFER",
+        )
+
+        self.assertEqual(
+            values["bank_account"],
+            self.bank_account,
+        )
+
+        self.assertEqual(
+            values["reference_number"],
+            "UTR-001",
+        )
+
+    def test_service_rejects_cross_tenant_bank_account(
+        self,
+    ):
+        with patch.object(
+            BankAccountRepository,
+            "get_by_id",
+            return_value=None,
+        ):
+            with self.assertRaises(
+                InvoiceAPIValidationError
+            ) as context:
+                (
+                    InvoiceAPIService
+                    .validate_payment_payload(
+                        organization=(
+                            self.organization
+                        ),
+                        payload={
+                            "amount":
+                                "100.00",
+                            "payment_method":
+                                "CASH",
+                            "bank_account_id":
+                                str(
+                                    ObjectId()
+                                ),
+                        },
+                    )
+                )
+
+        self.assertIn(
+            "bank_account_id",
+            context.exception.details,
+        )
+
+    def test_invoice_collection_rejects_delete(
+        self,
+    ):
+        response = self.client.delete(
+            self.INVOICES_URL
         )
 
         self.assert_error_contract(

@@ -8,15 +8,29 @@ from apps.finance.models import (
 class BankAccountRepository:
 
     @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return BankAccount.objects(
+            organization=organization,
+        )
+    @staticmethod
     def get_by_id(
         *,
         organization,
         bank_account_id,
     ):
-        return BankAccount.objects(
-            organization=organization,
-            id=bank_account_id,
-        ).first()
+        return (
+            BankAccountRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                id=bank_account_id,
+            )
+            .first()
+        )
 
     @staticmethod
     def get_by_name(
@@ -48,10 +62,7 @@ class BankAccountRepository:
         account_type=None,
         is_active=None,
     ):
-        query = {
-            "organization":
-                organization,
-        }
+        query = {}
 
         if account_type is not None:
             query[
@@ -63,10 +74,18 @@ class BankAccountRepository:
                 "is_active"
             ] = is_active
 
-        return BankAccount.objects(
-            **query
-        ).order_by(
-            "account_name"
+        return (
+            BankAccountRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                **query
+            )
+            .order_by(
+                "account_name",
+                "id",
+            )
         )
 
     @staticmethod

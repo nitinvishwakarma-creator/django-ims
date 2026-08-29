@@ -506,7 +506,63 @@ class Command(
                 )
             ),
         )
+        check(
+            "Invoice collection route available",
+            route_exists(
+                "/api/v1/invoices/"
+            ),
+        )
 
+        check(
+            "Invoice detail route available",
+            route_exists(
+                (
+                    "/api/v1/invoices/"
+                    "audit-invoice-id/"
+                )
+            ),
+        )
+
+        check(
+            "Invoice issue route available",
+            route_exists(
+                (
+                    "/api/v1/invoices/"
+                    "audit-invoice-id/issue/"
+                )
+            ),
+        )
+
+        check(
+            "Invoice cancellation route available",
+            route_exists(
+                (
+                    "/api/v1/invoices/"
+                    "audit-invoice-id/cancel/"
+                )
+            ),
+        )
+
+        check(
+            "Invoice payment route available",
+            route_exists(
+                (
+                    "/api/v1/invoices/"
+                    "audit-invoice-id/"
+                    "record-payment/"
+                )
+            ),
+        )
+
+        check(
+            "Invoice payment-account route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "invoice-bank-accounts/"
+                )
+            ),
+        )
         check(
             "Supplier collection route available",
             route_exists(
@@ -897,6 +953,13 @@ class Command(
                 )
             )
 
+            invoice_endpoints = (
+                manifest_endpoints.get(
+                    "invoices",
+                    {},
+                )
+            )
+
             supplier_endpoints = (
                 manifest_endpoints.get(
                     "suppliers",
@@ -1001,6 +1064,79 @@ class Command(
                         "supports_partial_fulfillment"
                     )
                     is True
+                ),
+            )
+            check(
+                (
+                    "Discovery exposes Invoice "
+                    "management endpoints"
+                ),
+                (
+                    invoice_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/invoices/"
+                    and
+                    invoice_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    invoice_endpoints
+                    .get(
+                        "issue",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    invoice_endpoints
+                    .get(
+                        "cancel",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    invoice_endpoints
+                    .get(
+                        "record_payment",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    invoice_endpoints
+                    .get(
+                        "payment_accounts",
+                        {},
+                    )
+                    .get(
+                        "sensitive_account_numbers"
+                    )
+                    ==
+                    "masked"
                 ),
             )
             check(

@@ -1021,6 +1021,167 @@ class APIDiscoveryService:
             },
         }
     @staticmethod
+    def get_invoice_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/invoices/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "invoices.read",
+                    "POST":
+                        "invoices.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "customer_id":
+                        "object_id",
+                    "sales_order_id":
+                        "object_id",
+                    "status":
+                        "string",
+                },
+                "create_fields": [
+                    "sales_order_id",
+                    "invoice_date",
+                    "due_date",
+                    "notes",
+                ],
+                "creation_rule": (
+                    "One invoice per fulfilled "
+                    "Sales Order."
+                ),
+                "status":
+                    "available",
+            },
+
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/invoices/"
+                    "{invoice_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "invoices.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+
+            "issue": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/invoices/"
+                    "{invoice_id}/issue/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "invoices.issue",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "accounting_effect":
+                    "post_sales_journal",
+                "status":
+                    "available",
+            },
+
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/invoices/"
+                    "{invoice_id}/cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "invoices.cancel",
+                "blocked_statuses": [
+                    "PARTIALLY_PAID",
+                    "PAID",
+                    "CANCELLED",
+                ],
+                "status":
+                    "available",
+            },
+
+            "record_payment": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/invoices/"
+                    "{invoice_id}/"
+                    "record-payment/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "invoices.record_payment",
+                "eligible_statuses": [
+                    "ISSUED",
+                    "PARTIALLY_PAID",
+                ],
+                "accounting_effect":
+                    "post_customer_payment",
+                "bank_effect":
+                    "money_in",
+                "status":
+                    "available",
+            },
+
+            "payment_accounts": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "invoice-bank-accounts/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "invoices.record_payment",
+                "sensitive_account_numbers":
+                    "masked",
+                "status":
+                    "available",
+            },
+        }
+    @staticmethod
     def get_supplier_endpoints():
         return {
             "collection": {
@@ -1523,6 +1684,11 @@ class APIDiscoveryService:
                     (
                         APIDiscoveryService
                         .get_sales_order_endpoints()
+                    ),
+                "invoices":
+                    (
+                        APIDiscoveryService
+                        .get_invoice_endpoints()
                     ),
                 "suppliers":
                     (

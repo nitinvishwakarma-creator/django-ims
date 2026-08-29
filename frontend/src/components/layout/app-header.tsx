@@ -58,6 +58,11 @@ export default function AppHeader({
 
     try {
       await signOut();
+
+    } catch {
+      // An expired or already-cleared session
+      // is equivalent to being signed out.
+
     } finally {
       router.replace("/login");
       router.refresh();

@@ -13,6 +13,10 @@ import {
 } from "@tanstack/react-query";
 
 import {
+  APIRequestError,
+} from "@/lib/api/client";
+
+import {
   getCurrentUser,
   login,
   logout,
@@ -162,6 +166,17 @@ export function AuthProvider({
     Promise<void> {
     try {
       await logoutMutation.mutateAsync();
+
+    } catch (error) {
+      const sessionAlreadyEnded =
+        error instanceof APIRequestError
+        &&
+        error.status === 401;
+
+      if (!sessionAlreadyEnded) {
+        throw error;
+      }
+
     } finally {
       await clearAuthentication();
     }
@@ -171,6 +186,17 @@ export function AuthProvider({
     Promise<void> {
     try {
       await logoutAllMutation.mutateAsync();
+
+    } catch (error) {
+      const sessionAlreadyEnded =
+        error instanceof APIRequestError
+        &&
+        error.status === 401;
+
+      if (!sessionAlreadyEnded) {
+        throw error;
+      }
+
     } finally {
       await clearAuthentication();
     }

@@ -67,7 +67,11 @@ urlpatterns = [
     path(
         "",
         include(
-            "apps.purchasing.api.v1.urls"
+            (
+                "apps.purchasing.api.v1.urls",
+                "purchasing_api_v1",
+            ),
+            namespace="purchasing_api_v1",
         ),
     ),
 ]

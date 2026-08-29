@@ -38,9 +38,11 @@ from apps.organizations.api_context_service import (
 )
 from apps.purchasing.api.v1.serializers import (
     PurchaseOrderAPISerializer,
+    PurchaseReturnAPISerializer,
     SupplierAPISerializer,
     SupplierPaymentAPISerializer,
     VendorBillAPISerializer,
+    VendorDebitNoteAPISerializer,
 )
 from apps.purchasing.repositories.supplier_repository import (
     SupplierRepository,
@@ -50,6 +52,12 @@ from apps.products.repositories.product_repository import (
 )
 from apps.purchasing.repositories.purchase_order_repository import (
     PurchaseOrderRepository,
+)
+from apps.purchasing.repositories.purchase_return_repository import (
+    PurchaseReturnRepository,
+)
+from apps.purchasing.repositories.vendor_debit_note_repository import (
+    VendorDebitNoteRepository,
 )
 from apps.purchasing.repositories.vendor_bill_repository import (
     VendorBillRepository,
@@ -63,6 +71,16 @@ from apps.purchasing.services.purchase_order_api_service import (
     PurchaseOrderAPIService,
     PurchaseOrderAPIStateError,
     PurchaseOrderAPIValidationError,
+)
+from apps.purchasing.services.purchase_return_api_service import (
+    PurchaseReturnAPIService,
+    PurchaseReturnAPIStateError,
+    PurchaseReturnAPIValidationError,
+)
+from apps.purchasing.services.vendor_debit_note_api_service import (
+    VendorDebitNoteAPIService,
+    VendorDebitNoteAPIStateError,
+    VendorDebitNoteAPIValidationError,
 )
 from apps.purchasing.services.vendor_bill_api_service import (
     VendorBillAPIService,
@@ -2927,6 +2945,863 @@ class VendorBillAPIV1RegressionTestCase(
 
         self.assert_error_contract(
             response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+class PurchaseReturnAndDebitNoteAPIV1RegressionTestCase(
+    SimpleTestCase
+):
+
+    PURCHASE_RETURNS_URL = (
+        "/api/v1/purchase-returns/"
+    )
+
+    DEBIT_NOTES_URL = (
+        "/api/v1/vendor-debit-notes/"
+    )
+
+    def setUp(self):
+        now = datetime.utcnow()
+
+        self.organization = SimpleNamespace(
+            id=ObjectId(),
+            name="Return Regression Organization",
+            email="organization@example.com",
+            phone="9999999999",
+            address="Regression Address",
+            country="India",
+            currency="INR",
+            timezone="Asia/Kolkata",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.user = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            email="admin@example.com",
+            first_name="System",
+            last_name="Administrator",
+            is_active=True,
+            is_authenticated=True,
+            is_anonymous=False,
+        )
+
+        self.supplier = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            code="SUP-RETURN-001",
+            name="Return Supplier",
+            email="supplier@example.com",
+            phone="9999999998",
+            gstin="27ABCDE1234F1Z5",
+            address="Supplier Address",
+            city="Mumbai",
+            state="Maharashtra",
+            country="India",
+            pincode="400001",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.product = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            sku="RETURN-001",
+            name="Return Product",
+            unit="piece",
+            is_active=True,
+        )
+
+        self.warehouse = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            code="WH-RETURN-001",
+            name="Return Warehouse",
+            address="Warehouse Address",
+            city="Pune",
+            state="Maharashtra",
+            country="India",
+            pincode="411001",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.purchase_order = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            po_number="PO-RETURN-001",
+            supplier=self.supplier,
+            status="RECEIVED",
+        )
+
+        self.vendor_bill = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            bill_number="BILL-RETURN-001",
+            purchase_order=self.purchase_order,
+            supplier=self.supplier,
+            status="POSTED",
+            total_amount=Decimal("118.00"),
+            balance_due=Decimal("118.00"),
+        )
+
+        self.return_item = SimpleNamespace(
+            product=self.product,
+            quantity=Decimal("1.00"),
+            unit_price=Decimal("100.00"),
+            tax_rate=Decimal("18.00"),
+            discount=Decimal("0.00"),
+            line_subtotal=Decimal("100.00"),
+            line_tax=Decimal("18.00"),
+            line_total=Decimal("118.00"),
+            reason="Damaged item.",
+        )
+
+        self.purchase_return = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            return_number="PR-RETURN-001",
+            purchase_order=self.purchase_order,
+            vendor_bill=self.vendor_bill,
+            supplier=self.supplier,
+            warehouse=self.warehouse,
+            status="DRAFT",
+            return_date=now,
+            items=[
+                self.return_item,
+            ],
+            subtotal=Decimal("100.00"),
+            tax_amount=Decimal("18.00"),
+            discount_amount=Decimal("0.00"),
+            total_amount=Decimal("118.00"),
+            reason="Damaged shipment.",
+            notes="Regression purchase return.",
+            created_by=self.user,
+            confirmed_at=None,
+            cancelled_at=None,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.debit_note_item = SimpleNamespace(
+            product=self.product,
+            quantity=Decimal("1.00"),
+            unit_price=Decimal("100.00"),
+            tax_rate=Decimal("18.00"),
+            discount=Decimal("0.00"),
+            line_subtotal=Decimal("100.00"),
+            line_tax=Decimal("18.00"),
+            line_total=Decimal("118.00"),
+        )
+
+        self.debit_note = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            debit_note_number="DN-RETURN-001",
+            purchase_return=self.purchase_return,
+            vendor_bill=self.vendor_bill,
+            purchase_order=self.purchase_order,
+            supplier=self.supplier,
+            status="DRAFT",
+            debit_note_date=now,
+            items=[
+                self.debit_note_item,
+            ],
+            subtotal=Decimal("100.00"),
+            tax_amount=Decimal("18.00"),
+            discount_amount=Decimal("0.00"),
+            total_amount=Decimal("118.00"),
+            applied_amount=Decimal("0.00"),
+            remaining_credit=Decimal("118.00"),
+            reason="Damaged shipment.",
+            notes="Regression debit note.",
+            created_by=self.user,
+            issued_at=None,
+            cancelled_at=None,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.organization_context = {
+            "user":
+                self.user,
+            "organization":
+                self.organization,
+        }
+
+        self.patchers = [
+            patch.object(
+                ApplicationLoggingService,
+                "log",
+                return_value=None,
+            ),
+            patch.object(
+                MongoDBErrorLoggingService,
+                "log_exception",
+                return_value=None,
+            ),
+            patch.object(
+                APIOrganizationContextService,
+                "resolve",
+                return_value=(
+                    self.organization_context
+                ),
+            ),
+            patch.object(
+                AuthorizationService,
+                "has_permission",
+                return_value=True,
+            ),
+            patch.object(
+                APIRateLimitService,
+                "check",
+                return_value={
+                    "allowed": True,
+                },
+            ),
+            patch.object(
+                APIRateLimitService,
+                "add_headers",
+                side_effect=(
+                    lambda response, result:
+                    response
+                ),
+            ),
+        ]
+
+        for patcher in self.patchers:
+            patcher.start()
+
+        self.client = Client(
+            raise_request_exception=False
+        )
+
+    def tearDown(self):
+        for patcher in reversed(
+            self.patchers
+        ):
+            patcher.stop()
+
+    def purchase_return_detail_url(self):
+        return (
+            f"{self.PURCHASE_RETURNS_URL}"
+            f"{self.purchase_return.id}/"
+        )
+
+    def purchase_return_confirm_url(self):
+        return (
+            f"{self.PURCHASE_RETURNS_URL}"
+            f"{self.purchase_return.id}/"
+            "confirm/"
+        )
+
+    def purchase_return_cancel_url(self):
+        return (
+            f"{self.PURCHASE_RETURNS_URL}"
+            f"{self.purchase_return.id}/"
+            "cancel/"
+        )
+
+    def debit_note_detail_url(self):
+        return (
+            f"{self.DEBIT_NOTES_URL}"
+            f"{self.debit_note.id}/"
+        )
+
+    def debit_note_issue_url(self):
+        return (
+            f"{self.DEBIT_NOTES_URL}"
+            f"{self.debit_note.id}/"
+            "issue/"
+        )
+
+    def debit_note_cancel_url(self):
+        return (
+            f"{self.DEBIT_NOTES_URL}"
+            f"{self.debit_note.id}/"
+            "cancel/"
+        )
+
+    def assert_success_contract(
+        self,
+        response,
+        expected_status=200,
+    ):
+        body = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+        )
+
+        self.assertTrue(
+            body["success"]
+        )
+
+        self.assertIn(
+            "data",
+            body,
+        )
+
+        self.assertTrue(
+            body.get(
+                "request_id"
+            )
+        )
+
+        self.assertEqual(
+            response.headers.get(
+                "X-Request-ID"
+            ),
+            body["request_id"],
+        )
+
+        return body
+
+    def assert_error_contract(
+        self,
+        response,
+        expected_status,
+        expected_code,
+    ):
+        body = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+        )
+
+        self.assertFalse(
+            body["success"]
+        )
+
+        self.assertEqual(
+            body["error"]["code"],
+            expected_code,
+        )
+
+        self.assertTrue(
+            body.get(
+                "request_id"
+            )
+        )
+
+        return body
+
+    @staticmethod
+    def pipeline_result(
+        items,
+    ):
+        return {
+            "items":
+                items,
+            "pagination": {
+                "page": 1,
+                "page_size": 25,
+                "total_items":
+                    len(items),
+                "total_pages": 1,
+                "has_next": False,
+                "has_previous": False,
+            },
+            "query": {
+                "search": None,
+                "filters": {},
+                "sort": [
+                    "-return_date",
+                    "id",
+                ],
+            },
+        }
+
+    def test_anonymous_purchase_return_list_is_rejected(
+        self,
+    ):
+        with patch.object(
+            APIOrganizationContextService,
+            "resolve",
+            side_effect=PermissionError(
+                "Not authenticated."
+            ),
+        ):
+            response = self.client.get(
+                self.PURCHASE_RETURNS_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            401,
+            "UNAUTHORIZED",
+        )
+
+    def test_purchase_return_list_uses_query_pipeline(
+        self,
+    ):
+        with patch.object(
+            APIQueryPipelineService,
+            "execute",
+            return_value=self.pipeline_result([
+                self.purchase_return,
+            ]),
+        ) as execute_mock:
+            response = self.client.get(
+                self.PURCHASE_RETURNS_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            len(
+                body["data"][
+                    "purchase_returns"
+                ]
+            ),
+            1,
+        )
+
+        execute_mock.assert_called_once()
+
+    def test_create_purchase_return(
+        self,
+    ):
+        with patch.object(
+            PurchaseReturnAPIService,
+            "create_purchase_return",
+            return_value=(
+                self.purchase_return
+            ),
+        ):
+            response = self.client.post(
+                self.PURCHASE_RETURNS_URL,
+                data=json.dumps({
+                    "purchase_order_id":
+                        str(
+                            self.purchase_order.id
+                        ),
+                    "vendor_bill_id":
+                        str(
+                            self.vendor_bill.id
+                        ),
+                    "warehouse_id":
+                        str(
+                            self.warehouse.id
+                        ),
+                    "items": [
+                        {
+                            "product_id":
+                                str(
+                                    self.product.id
+                                ),
+                            "quantity":
+                                "1.00",
+                        },
+                    ],
+                }),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response,
+            201,
+        )
+
+        self.assertEqual(
+            body["data"][
+                "purchase_return"
+            ]["return_number"],
+            self.purchase_return.return_number,
+        )
+
+    def test_purchase_return_detail(
+        self,
+    ):
+        with patch.object(
+            PurchaseReturnRepository,
+            "get_by_id",
+            return_value=(
+                self.purchase_return
+            ),
+        ):
+            response = self.client.get(
+                self.purchase_return_detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "purchase_return"
+            ]["id"],
+            str(
+                self.purchase_return.id
+            ),
+        )
+
+    def test_malformed_purchase_return_id_is_validation_error(
+        self,
+    ):
+        response = self.client.get(
+            (
+                f"{self.PURCHASE_RETURNS_URL}"
+                "invalid-id/"
+            )
+        )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_missing_purchase_return_returns_not_found(
+        self,
+    ):
+        with patch.object(
+            PurchaseReturnRepository,
+            "get_by_id",
+            return_value=None,
+        ):
+            response = self.client.get(
+                (
+                    f"{self.PURCHASE_RETURNS_URL}"
+                    f"{ObjectId()}/"
+                )
+            )
+
+        self.assert_error_contract(
+            response,
+            404,
+            "NOT_FOUND",
+        )
+
+    def test_confirm_purchase_return(
+        self,
+    ):
+        confirmed = SimpleNamespace(
+            **{
+                **vars(
+                    self.purchase_return
+                ),
+                "status":
+                    "CONFIRMED",
+                "confirmed_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            PurchaseReturnAPIService,
+            "confirm_purchase_return",
+            return_value=confirmed,
+        ):
+            response = self.client.post(
+                self.purchase_return_confirm_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "purchase_return"
+            ]["status"],
+            "CONFIRMED",
+        )
+
+    def test_purchase_return_state_error_is_unprocessable(
+        self,
+    ):
+        with patch.object(
+            PurchaseReturnAPIService,
+            "confirm_purchase_return",
+            side_effect=(
+                PurchaseReturnAPIStateError(
+                    message=(
+                        "Only draft purchase "
+                        "returns can be confirmed."
+                    ),
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.purchase_return_confirm_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            422,
+            "UNPROCESSABLE_ENTITY",
+        )
+
+    def test_cancel_purchase_return(
+        self,
+    ):
+        cancelled = SimpleNamespace(
+            **{
+                **vars(
+                    self.purchase_return
+                ),
+                "status":
+                    "CANCELLED",
+                "cancelled_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            PurchaseReturnAPIService,
+            "cancel_purchase_return",
+            return_value=cancelled,
+        ):
+            response = self.client.post(
+                self.purchase_return_cancel_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "purchase_return"
+            ]["status"],
+            "CANCELLED",
+        )
+
+    def test_vendor_debit_note_list(
+        self,
+    ):
+        result = self.pipeline_result([
+            self.debit_note,
+        ])
+
+        result["query"]["sort"] = [
+            "-debit_note_date",
+            "id",
+        ]
+
+        with patch.object(
+            APIQueryPipelineService,
+            "execute",
+            return_value=result,
+        ):
+            response = self.client.get(
+                self.DEBIT_NOTES_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            len(
+                body["data"][
+                    "vendor_debit_notes"
+                ]
+            ),
+            1,
+        )
+
+    def test_create_vendor_debit_note(
+        self,
+    ):
+        with patch.object(
+            VendorDebitNoteAPIService,
+            "create_debit_note",
+            return_value=self.debit_note,
+        ):
+            response = self.client.post(
+                self.DEBIT_NOTES_URL,
+                data=json.dumps({
+                    "purchase_return_id":
+                        str(
+                            self.purchase_return.id
+                        ),
+                }),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response,
+            201,
+        )
+
+        self.assertEqual(
+            body["data"][
+                "vendor_debit_note"
+            ]["debit_note_number"],
+            self.debit_note.debit_note_number,
+        )
+
+    def test_vendor_debit_note_detail(
+        self,
+    ):
+        with patch.object(
+            VendorDebitNoteRepository,
+            "get_by_id",
+            return_value=self.debit_note,
+        ):
+            response = self.client.get(
+                self.debit_note_detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "vendor_debit_note"
+            ]["id"],
+            str(
+                self.debit_note.id
+            ),
+        )
+
+    def test_issue_vendor_debit_note(
+        self,
+    ):
+        issued = SimpleNamespace(
+            **{
+                **vars(
+                    self.debit_note
+                ),
+                "status":
+                    "ISSUED",
+                "applied_amount":
+                    Decimal("118.00"),
+                "remaining_credit":
+                    Decimal("0.00"),
+                "issued_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            VendorDebitNoteAPIService,
+            "issue_debit_note",
+            return_value=issued,
+        ):
+            response = self.client.post(
+                self.debit_note_issue_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "vendor_debit_note"
+            ]["status"],
+            "ISSUED",
+        )
+
+    def test_cancel_vendor_debit_note(
+        self,
+    ):
+        cancelled = SimpleNamespace(
+            **{
+                **vars(
+                    self.debit_note
+                ),
+                "status":
+                    "CANCELLED",
+                "cancelled_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            VendorDebitNoteAPIService,
+            "cancel_debit_note",
+            return_value=cancelled,
+        ):
+            response = self.client.post(
+                self.debit_note_cancel_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "vendor_debit_note"
+            ]["status"],
+            "CANCELLED",
+        )
+
+    def test_vendor_debit_note_state_error_is_unprocessable(
+        self,
+    ):
+        with patch.object(
+            VendorDebitNoteAPIService,
+            "issue_debit_note",
+            side_effect=(
+                VendorDebitNoteAPIStateError(
+                    message=(
+                        "Only draft vendor debit "
+                        "notes can be issued."
+                    ),
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.debit_note_issue_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            422,
+            "UNPROCESSABLE_ENTITY",
+        )
+
+    def test_collections_reject_delete(
+        self,
+    ):
+        purchase_response = (
+            self.client.delete(
+                self.PURCHASE_RETURNS_URL
+            )
+        )
+
+        debit_response = (
+            self.client.delete(
+                self.DEBIT_NOTES_URL
+            )
+        )
+
+        self.assert_error_contract(
+            purchase_response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+        self.assert_error_contract(
+            debit_response,
             405,
             "METHOD_NOT_ALLOWED",
         )

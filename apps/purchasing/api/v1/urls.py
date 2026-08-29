@@ -7,7 +7,9 @@ from apps.purchasing.api.v1 import (
 )
 from apps.purchasing.api.v1 import (
     goods_receipt_views,
+    purchase_return_views,
     vendor_bill_views,
+    vendor_debit_note_views,
     views,
 )
 
@@ -143,5 +145,82 @@ urlpatterns = [
         vendor_bill_views
         .accounts_payable_api,
         name="accounts_payable",
+    ),
+    path(
+        "purchase-returns/",
+        purchase_return_views
+        .purchase_return_collection_api,
+        name="purchase_return_collection",
+    ),
+
+    path(
+        (
+            "purchase-returns/"
+            "<str:purchase_return_id>/"
+            "confirm/"
+        ),
+        purchase_return_views
+        .purchase_return_confirm_api,
+        name="purchase_return_confirm",
+    ),
+
+    path(
+        (
+            "purchase-returns/"
+            "<str:purchase_return_id>/"
+            "cancel/"
+        ),
+        purchase_return_views
+        .purchase_return_cancel_api,
+        name="purchase_return_cancel",
+    ),
+
+    path(
+        (
+            "purchase-returns/"
+            "<str:purchase_return_id>/"
+        ),
+        purchase_return_views
+        .purchase_return_detail_api,
+        name="purchase_return_detail",
+    ),
+
+    path(
+        "vendor-debit-notes/",
+        vendor_debit_note_views
+        .vendor_debit_note_collection_api,
+        name="vendor_debit_note_collection",
+    ),
+
+    path(
+        (
+            "vendor-debit-notes/"
+            "<str:debit_note_id>/"
+            "issue/"
+        ),
+        vendor_debit_note_views
+        .vendor_debit_note_issue_api,
+        name="vendor_debit_note_issue",
+    ),
+
+    path(
+        (
+            "vendor-debit-notes/"
+            "<str:debit_note_id>/"
+            "cancel/"
+        ),
+        vendor_debit_note_views
+        .vendor_debit_note_cancel_api,
+        name="vendor_debit_note_cancel",
+    ),
+
+    path(
+        (
+            "vendor-debit-notes/"
+            "<str:debit_note_id>/"
+        ),
+        vendor_debit_note_views
+        .vendor_debit_note_detail_api,
+        name="vendor_debit_note_detail",
     ),
 ]

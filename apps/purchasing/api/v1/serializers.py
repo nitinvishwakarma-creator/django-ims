@@ -1118,3 +1118,510 @@ class SupplierPaymentAPISerializer:
             for payment
             in payments
         ]
+
+class PurchaseReturnAPISerializer:
+
+    @staticmethod
+    def _serialize_purchase_order(
+        purchase_order,
+    ):
+        if not purchase_order:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    purchase_order.id
+                )
+            ),
+            "po_number":
+                purchase_order.po_number,
+            "status":
+                purchase_order.status,
+        }
+
+    @staticmethod
+    def _serialize_vendor_bill(
+        vendor_bill,
+    ):
+        if not vendor_bill:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    vendor_bill.id
+                )
+            ),
+            "bill_number":
+                vendor_bill.bill_number,
+            "status":
+                vendor_bill.status,
+            "total_amount":
+                str(
+                    vendor_bill.total_amount
+                ),
+            "balance_due":
+                str(
+                    vendor_bill.balance_due
+                ),
+        }
+
+    @staticmethod
+    def serialize_item(
+        item,
+    ):
+        if not item:
+            return None
+
+        return {
+            "product": (
+                VendorBillAPISerializer
+                ._serialize_product(
+                    item.product
+                )
+            ),
+            "quantity":
+                str(
+                    item.quantity
+                ),
+            "unit_price":
+                str(
+                    item.unit_price
+                ),
+            "tax_rate":
+                str(
+                    item.tax_rate
+                ),
+            "discount":
+                str(
+                    item.discount
+                ),
+            "line_subtotal":
+                str(
+                    item.line_subtotal
+                ),
+            "line_tax":
+                str(
+                    item.line_tax
+                ),
+            "line_total":
+                str(
+                    item.line_total
+                ),
+            "reason":
+                (
+                    item.reason
+                    or
+                    None
+                ),
+        }
+
+    @staticmethod
+    def serialize_summary(
+        purchase_return,
+    ):
+        if not purchase_return:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    purchase_return.id
+                )
+            ),
+            "return_number":
+                purchase_return.return_number,
+            "purchase_order": (
+                PurchaseReturnAPISerializer
+                ._serialize_purchase_order(
+                    purchase_return
+                    .purchase_order
+                )
+            ),
+            "vendor_bill": (
+                PurchaseReturnAPISerializer
+                ._serialize_vendor_bill(
+                    purchase_return
+                    .vendor_bill
+                )
+            ),
+            "supplier": (
+                SupplierAPISerializer
+                .serialize_summary(
+                    purchase_return.supplier
+                )
+            ),
+            "warehouse": (
+                WarehouseAPISerializer
+                .serialize_summary(
+                    purchase_return.warehouse
+                )
+            ),
+            "status":
+                purchase_return.status,
+            "return_date": (
+                APISerializationService
+                .serialize_datetime(
+                    purchase_return.return_date
+                )
+            ),
+            "subtotal":
+                str(
+                    purchase_return.subtotal
+                ),
+            "tax_amount":
+                str(
+                    purchase_return.tax_amount
+                ),
+            "discount_amount":
+                str(
+                    purchase_return
+                    .discount_amount
+                ),
+            "total_amount":
+                str(
+                    purchase_return.total_amount
+                ),
+            "item_count":
+                len(
+                    purchase_return.items
+                    or
+                    []
+                ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    purchase_return.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    purchase_return.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        purchase_return,
+    ):
+        if not purchase_return:
+            return None
+
+        summary = (
+            PurchaseReturnAPISerializer
+            .serialize_summary(
+                purchase_return
+            )
+        )
+
+        return {
+            **summary,
+            "items": [
+                (
+                    PurchaseReturnAPISerializer
+                    .serialize_item(
+                        item
+                    )
+                )
+                for item
+                in (
+                    purchase_return.items
+                    or
+                    []
+                )
+            ],
+            "reason":
+                (
+                    purchase_return.reason
+                    or
+                    None
+                ),
+            "notes":
+                (
+                    purchase_return.notes
+                    or
+                    None
+                ),
+            "created_by": (
+                VendorBillAPISerializer
+                ._serialize_user(
+                    purchase_return.created_by
+                )
+            ),
+            "confirmed_at": (
+                APISerializationService
+                .serialize_datetime(
+                    purchase_return
+                    .confirmed_at
+                )
+            ),
+            "cancelled_at": (
+                APISerializationService
+                .serialize_datetime(
+                    purchase_return
+                    .cancelled_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        purchase_returns,
+    ):
+        return [
+            (
+                PurchaseReturnAPISerializer
+                .serialize_summary(
+                    purchase_return
+                )
+            )
+            for purchase_return
+            in purchase_returns
+        ]
+
+
+class VendorDebitNoteAPISerializer:
+
+    @staticmethod
+    def _serialize_purchase_return(
+        purchase_return,
+    ):
+        if not purchase_return:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    purchase_return.id
+                )
+            ),
+            "return_number":
+                purchase_return.return_number,
+            "status":
+                purchase_return.status,
+            "total_amount":
+                str(
+                    purchase_return.total_amount
+                ),
+        }
+
+    @staticmethod
+    def serialize_item(
+        item,
+    ):
+        if not item:
+            return None
+
+        return {
+            "product": (
+                VendorBillAPISerializer
+                ._serialize_product(
+                    item.product
+                )
+            ),
+            "quantity":
+                str(
+                    item.quantity
+                ),
+            "unit_price":
+                str(
+                    item.unit_price
+                ),
+            "tax_rate":
+                str(
+                    item.tax_rate
+                ),
+            "discount":
+                str(
+                    item.discount
+                ),
+            "line_subtotal":
+                str(
+                    item.line_subtotal
+                ),
+            "line_tax":
+                str(
+                    item.line_tax
+                ),
+            "line_total":
+                str(
+                    item.line_total
+                ),
+        }
+
+    @staticmethod
+    def serialize_summary(
+        debit_note,
+    ):
+        if not debit_note:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    debit_note.id
+                )
+            ),
+            "debit_note_number":
+                debit_note.debit_note_number,
+            "purchase_return": (
+                VendorDebitNoteAPISerializer
+                ._serialize_purchase_return(
+                    debit_note.purchase_return
+                )
+            ),
+            "vendor_bill": (
+                PurchaseReturnAPISerializer
+                ._serialize_vendor_bill(
+                    debit_note.vendor_bill
+                )
+            ),
+            "purchase_order": (
+                PurchaseReturnAPISerializer
+                ._serialize_purchase_order(
+                    debit_note.purchase_order
+                )
+            ),
+            "supplier": (
+                SupplierAPISerializer
+                .serialize_summary(
+                    debit_note.supplier
+                )
+            ),
+            "status":
+                debit_note.status,
+            "debit_note_date": (
+                APISerializationService
+                .serialize_datetime(
+                    debit_note
+                    .debit_note_date
+                )
+            ),
+            "subtotal":
+                str(
+                    debit_note.subtotal
+                ),
+            "tax_amount":
+                str(
+                    debit_note.tax_amount
+                ),
+            "discount_amount":
+                str(
+                    debit_note.discount_amount
+                ),
+            "total_amount":
+                str(
+                    debit_note.total_amount
+                ),
+            "applied_amount":
+                str(
+                    debit_note.applied_amount
+                ),
+            "remaining_credit":
+                str(
+                    debit_note.remaining_credit
+                ),
+            "item_count":
+                len(
+                    debit_note.items
+                    or
+                    []
+                ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    debit_note.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    debit_note.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        debit_note,
+    ):
+        if not debit_note:
+            return None
+
+        summary = (
+            VendorDebitNoteAPISerializer
+            .serialize_summary(
+                debit_note
+            )
+        )
+
+        return {
+            **summary,
+            "items": [
+                (
+                    VendorDebitNoteAPISerializer
+                    .serialize_item(
+                        item
+                    )
+                )
+                for item
+                in (
+                    debit_note.items
+                    or
+                    []
+                )
+            ],
+            "reason":
+                (
+                    debit_note.reason
+                    or
+                    None
+                ),
+            "notes":
+                (
+                    debit_note.notes
+                    or
+                    None
+                ),
+            "created_by": (
+                VendorBillAPISerializer
+                ._serialize_user(
+                    debit_note.created_by
+                )
+            ),
+            "issued_at": (
+                APISerializationService
+                .serialize_datetime(
+                    debit_note.issued_at
+                )
+            ),
+            "cancelled_at": (
+                APISerializationService
+                .serialize_datetime(
+                    debit_note.cancelled_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        debit_notes,
+    ):
+        return [
+            (
+                VendorDebitNoteAPISerializer
+                .serialize_summary(
+                    debit_note
+                )
+            )
+            for debit_note
+            in debit_notes
+        ]

@@ -702,6 +702,83 @@ class Command(
             ),
         )
         check(
+            "Purchase Return collection route available",
+            route_exists(
+                "/api/v1/purchase-returns/",
+            ),
+        )
+
+        check(
+            "Purchase Return detail route available",
+            route_exists(
+                (
+                    "/api/v1/purchase-returns/"
+                    "audit-purchase-return-id/"
+                ),
+            ),
+        )
+
+        check(
+            "Purchase Return confirmation route available",
+            route_exists(
+                (
+                    "/api/v1/purchase-returns/"
+                    "audit-purchase-return-id/"
+                    "confirm/"
+                ),
+            ),
+        )
+
+        check(
+            "Purchase Return cancellation route available",
+            route_exists(
+                (
+                    "/api/v1/purchase-returns/"
+                    "audit-purchase-return-id/"
+                    "cancel/"
+                ),
+            ),
+        )
+
+        check(
+            "Vendor Debit Note collection route available",
+            route_exists(
+                "/api/v1/vendor-debit-notes/",
+            ),
+        )
+
+        check(
+            "Vendor Debit Note detail route available",
+            route_exists(
+                (
+                    "/api/v1/vendor-debit-notes/"
+                    "audit-debit-note-id/"
+                ),
+            ),
+        )
+
+        check(
+            "Vendor Debit Note issue route available",
+            route_exists(
+                (
+                    "/api/v1/vendor-debit-notes/"
+                    "audit-debit-note-id/"
+                    "issue/"
+                ),
+            ),
+        )
+
+        check(
+            "Vendor Debit Note cancellation route available",
+            route_exists(
+                (
+                    "/api/v1/vendor-debit-notes/"
+                    "audit-debit-note-id/"
+                    "cancel/"
+                ),
+            ),
+        )
+        check(
             "Warehouse collection route available",
             route_exists(
                 "/api/v1/warehouses/"
@@ -1094,6 +1171,18 @@ class Command(
             vendor_bill_endpoints = (
                 manifest_endpoints.get(
                     "vendor_bills",
+                    {},
+                )
+            )
+            purchase_return_endpoints = (
+                manifest_endpoints.get(
+                    "purchase_returns",
+                    {},
+                )
+            )
+            vendor_debit_note_endpoints = (
+                manifest_endpoints.get(
+                    "vendor_debit_notes",
                     {},
                 )
             )
@@ -1835,6 +1924,89 @@ class Command(
                 "Accounts payable route available",
                 route_exists(
                     "/api/v1/accounts-payable/",
+                ),
+            )
+            check(
+                "Discovery exposes Purchase Return endpoints",
+                all(
+                    endpoint_name
+                    in purchase_return_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "confirm",
+                        "cancel",
+                    )
+                ),
+            )
+
+            check(
+                "Discovery documents Purchase Return creation",
+                (
+                    "POST"
+                    in purchase_return_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "methods",
+                        [],
+                    )
+                    and
+                    purchase_return_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
+                ),
+            )
+
+            check(
+                "Discovery exposes Vendor Debit Note endpoints",
+                all(
+                    endpoint_name
+                    in vendor_debit_note_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "issue",
+                        "cancel",
+                    )
+                ),
+            )
+
+            check(
+                "Discovery documents Vendor Debit Note lifecycle",
+                (
+                    vendor_debit_note_endpoints
+                    .get(
+                        "issue",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "vendor_debit_notes.issue"
+                    and
+                    vendor_debit_note_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
                 ),
             )
             check(

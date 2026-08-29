@@ -1,11 +1,24 @@
 from datetime import datetime
 
+from mongoengine.errors import (
+    ValidationError,
+)
+
 from apps.purchasing.models import (
     VendorDebitNote,
 )
 
 
 class VendorDebitNoteRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return VendorDebitNote.objects(
+            organization=organization,
+        )
 
     @staticmethod
     def create_debit_note(
@@ -70,10 +83,24 @@ class VendorDebitNoteRepository:
         organization,
         debit_note_id,
     ):
-        return VendorDebitNote.objects(
-            organization=organization,
-            id=debit_note_id,
-        ).first()
+        try:
+            return (
+                VendorDebitNoteRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=debit_note_id,
+                )
+                .first()
+            )
+
+        except (
+            ValidationError,
+            TypeError,
+            ValueError,
+        ):
+            return None
 
     @staticmethod
     def get_by_purchase_return(
@@ -81,22 +108,34 @@ class VendorDebitNoteRepository:
         organization,
         purchase_return,
     ):
-        return VendorDebitNote.objects(
-            organization=organization,
-            purchase_return=(
-                purchase_return
-            ),
-        ).first()
+        return (
+            VendorDebitNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                purchase_return=(
+                    purchase_return
+                ),
+            )
+            .first()
+        )
 
     @staticmethod
     def list_by_organization(
         *,
         organization,
     ):
-        return VendorDebitNote.objects(
-            organization=organization,
-        ).order_by(
-            "-created_at"
+        return (
+            VendorDebitNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-debit_note_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -105,11 +144,19 @@ class VendorDebitNoteRepository:
         organization,
         supplier,
     ):
-        return VendorDebitNote.objects(
-            organization=organization,
-            supplier=supplier,
-        ).order_by(
-            "-created_at"
+        return (
+            VendorDebitNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                supplier=supplier,
+            )
+            .order_by(
+                "-debit_note_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -118,11 +165,19 @@ class VendorDebitNoteRepository:
         organization,
         vendor_bill,
     ):
-        return VendorDebitNote.objects(
-            organization=organization,
-            vendor_bill=vendor_bill,
-        ).order_by(
-            "-created_at"
+        return (
+            VendorDebitNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                vendor_bill=vendor_bill,
+            )
+            .order_by(
+                "-debit_note_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -132,27 +187,30 @@ class VendorDebitNoteRepository:
         supplier=None,
         vendor_bill=None,
     ):
-        filters = {
-            "organization":
-                organization,
-            "status":
-                "ISSUED",
-        }
+        queryset = (
+            VendorDebitNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                status="ISSUED",
+            )
+        )
 
         if supplier is not None:
-            filters[
-                "supplier"
-            ] = supplier
+            queryset = queryset.filter(
+                supplier=supplier,
+            )
 
         if vendor_bill is not None:
-            filters[
-                "vendor_bill"
-            ] = vendor_bill
+            queryset = queryset.filter(
+                vendor_bill=vendor_bill,
+            )
 
-        return VendorDebitNote.objects(
-            **filters
-        ).order_by(
-            "-created_at"
+        return queryset.order_by(
+            "-debit_note_date",
+            "-created_at",
+            "-id",
         )
 
     @staticmethod

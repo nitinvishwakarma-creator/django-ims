@@ -1,11 +1,24 @@
 from datetime import datetime
 
+from mongoengine.errors import (
+    ValidationError,
+)
+
 from apps.purchasing.models import (
     PurchaseReturn,
 )
 
 
 class PurchaseReturnRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return PurchaseReturn.objects(
+            organization=organization,
+        )
 
     @staticmethod
     def create_purchase_return(
@@ -56,10 +69,24 @@ class PurchaseReturnRepository:
         organization,
         purchase_return_id,
     ):
-        return PurchaseReturn.objects(
-            organization=organization,
-            id=purchase_return_id,
-        ).first()
+        try:
+            return (
+                PurchaseReturnRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=purchase_return_id,
+                )
+                .first()
+            )
+
+        except (
+            ValidationError,
+            TypeError,
+            ValueError,
+        ):
+            return None
 
     @staticmethod
     def get_by_number(
@@ -67,21 +94,32 @@ class PurchaseReturnRepository:
         organization,
         return_number,
     ):
-        return PurchaseReturn.objects(
-            organization=organization,
-            return_number=return_number,
-        ).first()
+        return (
+            PurchaseReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                return_number=return_number,
+            )
+            .first()
+        )
 
     @staticmethod
     def list_by_organization(
         *,
         organization,
     ):
-        return PurchaseReturn.objects(
-            organization=organization,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            PurchaseReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -90,12 +128,19 @@ class PurchaseReturnRepository:
         organization,
         purchase_order,
     ):
-        return PurchaseReturn.objects(
-            organization=organization,
-            purchase_order=purchase_order,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            PurchaseReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                purchase_order=purchase_order,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -104,12 +149,19 @@ class PurchaseReturnRepository:
         organization,
         vendor_bill,
     ):
-        return PurchaseReturn.objects(
-            organization=organization,
-            vendor_bill=vendor_bill,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            PurchaseReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                vendor_bill=vendor_bill,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -118,12 +170,19 @@ class PurchaseReturnRepository:
         organization,
         supplier,
     ):
-        return PurchaseReturn.objects(
-            organization=organization,
-            supplier=supplier,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            PurchaseReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                supplier=supplier,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -132,12 +191,19 @@ class PurchaseReturnRepository:
         organization,
         status,
     ):
-        return PurchaseReturn.objects(
-            organization=organization,
-            status=status,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            PurchaseReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                status=status,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod

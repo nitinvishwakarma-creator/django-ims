@@ -1737,6 +1737,248 @@ class APIDiscoveryService:
             },
         }
     @staticmethod
+    def get_purchase_return_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/purchase-returns/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "purchase_returns.read",
+                    "POST":
+                        "purchase_returns.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "supplier_id":
+                        "object_id",
+                    "purchase_order_id":
+                        "object_id",
+                    "vendor_bill_id":
+                        "object_id",
+                    "warehouse_id":
+                        "object_id",
+                    "status":
+                        "string",
+                },
+                "create_fields": [
+                    "purchase_order_id",
+                    "vendor_bill_id",
+                    "warehouse_id",
+                    "return_date",
+                    "items",
+                    "reason",
+                    "notes",
+                ],
+                "required_create_fields": [
+                    "purchase_order_id",
+                    "vendor_bill_id",
+                    "warehouse_id",
+                    "items",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/purchase-returns/"
+                    "{purchase_return_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "purchase_returns.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "confirm": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/purchase-returns/"
+                    "{purchase_return_id}/"
+                    "confirm/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "purchase_returns.confirm",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "effects": [
+                    "inventory_reduction",
+                    "stock_movements",
+                ],
+                "status":
+                    "available",
+            },
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/purchase-returns/"
+                    "{purchase_return_id}/"
+                    "cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "purchase_returns.cancel",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_vendor_debit_note_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "vendor-debit-notes/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "vendor_debit_notes.read",
+                    "POST":
+                        "vendor_debit_notes.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "supplier_id":
+                        "object_id",
+                    "purchase_order_id":
+                        "object_id",
+                    "purchase_return_id":
+                        "object_id",
+                    "vendor_bill_id":
+                        "object_id",
+                    "status":
+                        "string",
+                },
+                "create_fields": [
+                    "purchase_return_id",
+                    "debit_note_date",
+                    "reason",
+                    "notes",
+                ],
+                "required_create_fields": [
+                    "purchase_return_id",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "vendor-debit-notes/"
+                    "{debit_note_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "vendor_debit_notes.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "issue": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "vendor-debit-notes/"
+                    "{debit_note_id}/issue/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "vendor_debit_notes.issue",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "effects": [
+                    "payable_reduction",
+                    "accounting_journal",
+                ],
+                "status":
+                    "available",
+            },
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "vendor-debit-notes/"
+                    "{debit_note_id}/cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "vendor_debit_notes.cancel",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "status":
+                    "available",
+            },
+        }
+    @staticmethod
     def get_warehouse_endpoints():
         return {
             "collection": {
@@ -2171,6 +2413,15 @@ class APIDiscoveryService:
                 "vendor_bills": (
                     APIDiscoveryService
                     .get_vendor_bill_endpoints()
+                ),
+                "purchase_returns": (
+                    APIDiscoveryService
+                    .get_purchase_return_endpoints()
+                ),
+
+                "vendor_debit_notes": (
+                    APIDiscoveryService
+                    .get_vendor_debit_note_endpoints()
                 ),
                 "warehouses":
                     (

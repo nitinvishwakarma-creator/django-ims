@@ -3,6 +3,7 @@ import type {
 } from "lucide-react";
 
 import {
+  PackageCheck,
   ArrowDownUp,
   Banknote,
   Boxes,
@@ -147,6 +148,13 @@ export const navigationSections:
           href: "/purchase-orders",
           icon: ClipboardList,
           permission: "purchase_orders.read",
+        },
+        {
+          label: "Goods Receipts",
+          href: "/goods-receipts",
+          icon: PackageCheck,
+          permission:
+            "goods_receipts.read",
         },
         {
           label: "Vendor Bills",

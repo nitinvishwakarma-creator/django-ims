@@ -106,6 +106,18 @@ export const navigationSections:
           icon: ReceiptText,
           permission: "invoices.read",
         },
+          {
+            label: "Customer Payments",
+            href: "/customer-payments",
+            icon: Banknote,
+            permission: "customer_payments.read",
+          },
+          {
+            label: "Receivables",
+            href: "/accounts-receivable",
+            icon: ChartNoAxesCombined,
+            permission: "invoices.read",
+          },
         {
           label: "Sales Returns",
           href: "/sales-returns",

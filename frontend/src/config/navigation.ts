@@ -3,6 +3,7 @@ import type {
 } from "lucide-react";
 
 import {
+  CircleDollarSign,
   PackageCheck,
   ArrowDownUp,
   Banknote,
@@ -160,7 +161,13 @@ export const navigationSections:
           label: "Vendor Bills",
           href: "/vendor-bills",
           icon: FileText,
-          permission: "vendor_bills.read",
+          permission: "bills.read",
+        },
+        {
+          label: "Accounts Payable",
+          href: "/accounts-payable",
+          icon: CircleDollarSign,
+          permission: "bills.read",
         },
         {
           label: "Purchase Returns",

@@ -6,6 +6,30 @@ from apps.sales.models import (
 class PaymentRepository:
 
     @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        """
+        Return the tenant-scoped payment queryset.
+        """
+
+        if not organization:
+            return (
+                CustomerPayment
+                .objects(
+                    id=None,
+                )
+            )
+
+        return (
+            CustomerPayment
+            .objects(
+                organization=organization,
+            )
+        )
+
+    @staticmethod
     def create_payment(
         *,
         organization,
@@ -52,10 +76,16 @@ class PaymentRepository:
         Retrieve a payment within an organization.
         """
 
-        return CustomerPayment.objects(
-            organization=organization,
-            id=payment_id,
-        ).first()
+        return (
+            PaymentRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                id=payment_id,
+            )
+            .first()
+        )
 
     @staticmethod
     def get_by_payment_number(
@@ -67,10 +97,16 @@ class PaymentRepository:
         Retrieve payment using its payment number.
         """
 
-        return CustomerPayment.objects(
-            organization=organization,
-            payment_number=payment_number,
-        ).first()
+        return (
+            PaymentRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                payment_number=payment_number,
+            )
+            .first()
+        )
 
     @staticmethod
     def list_by_organization(
@@ -81,11 +117,16 @@ class PaymentRepository:
         List all customer payments.
         """
 
-        return CustomerPayment.objects(
-            organization=organization,
-        ).order_by(
-            "-payment_date",
-            "-created_at",
+        return (
+            PaymentRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-payment_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -98,12 +139,19 @@ class PaymentRepository:
         List payments received from one customer.
         """
 
-        return CustomerPayment.objects(
-            organization=organization,
-            customer=customer,
-        ).order_by(
-            "-payment_date",
-            "-created_at",
+        return (
+            PaymentRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                customer=customer,
+            )
+            .order_by(
+                "-payment_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -116,12 +164,19 @@ class PaymentRepository:
         List payments allocated to an invoice.
         """
 
-        return CustomerPayment.objects(
-            organization=organization,
-            allocations__invoice=invoice,
-        ).order_by(
-            "-payment_date",
-            "-created_at",
+        return (
+            PaymentRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                allocations__invoice=invoice,
+            )
+            .order_by(
+                "-payment_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -131,13 +186,21 @@ class PaymentRepository:
         reference_number,
     ):
         """
-        Find payment by external reference / UTR.
+        Find payment by external reference or UTR.
         """
 
         if not reference_number:
             return None
 
-        return CustomerPayment.objects(
-            organization=organization,
-            reference_number=reference_number,
-        ).first()
+        return (
+            PaymentRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                reference_number=(
+                    reference_number
+                ),
+            )
+            .first()
+        )

@@ -15,19 +15,27 @@ from apps.core.services.api_response_service import (
     APIResponseService,
 )
 from apps.sales.api.v1.serializers import (
-    CustomerAPISerializer,
-    SalesOrderAPISerializer,
+    AccountsReceivableAPISerializer,
     BankAccountLookupAPISerializer,
+    CustomerAPISerializer,
     CustomerPaymentAPISerializer,
     InvoiceAPISerializer,
+    SalesOrderAPISerializer,
 )
 from apps.sales.repositories.invoice_repository import (
     InvoiceRepository,
+)
+from apps.sales.repositories.payment_repository import (
+    PaymentRepository,
 )
 from apps.sales.services.invoice_api_service import (
     InvoiceAPIService,
     InvoiceAPIStateError,
     InvoiceAPIValidationError,
+)
+from apps.sales.services.customer_payment_api_service import (
+    CustomerPaymentAPIService,
+    CustomerPaymentAPIValidationError,
 )
 from apps.sales.repositories.sales_order_repository import (
     SalesOrderRepository,
@@ -2530,6 +2538,384 @@ def invoice_record_payment_api(
                 "successfully."
             ),
             status=201,
+            request=request,
+        )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="customer_payments.collection",
+    limit=120,
+    window_seconds=60,
+)
+def customer_payment_collection_api(
+    request,
+):
+    if request.method != "GET":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use GET to list "
+                    "customer payments."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "customer_payments.read",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    queryset = (
+        PaymentRepository
+        .queryset_for_organization(
+            organization=(
+                request.api_organization
+            ),
+        )
+    )
+
+    try:
+        pipeline_result = (
+            APIQueryPipelineService
+            .execute(
+                queryset,
+                request,
+                allowed_filters={
+                    "customer_id": {
+                        "field":
+                            "customer",
+                        "parser":
+                            "object_id",
+                    },
+                    "invoice_id": {
+                        "field":
+                            (
+                                "allocations"
+                                "__invoice"
+                            ),
+                        "parser":
+                            "object_id",
+                    },
+                    "bank_account_id": {
+                        "field":
+                            "bank_account",
+                        "parser":
+                            "object_id",
+                    },
+                    "payment_method": {
+                        "field":
+                            "payment_method",
+                    },
+                },
+                search_fields=[
+                    "payment_number",
+                    "customer__code",
+                    "customer__name",
+                    "reference_number",
+                    "bank_account__account_name",
+                    "bank_account__bank_name",
+                    "notes",
+                ],
+                allowed_sort_fields={
+                    "payment_number":
+                        "payment_number",
+                    "payment_date":
+                        "payment_date",
+                    "amount":
+                        "amount",
+                    "payment_method":
+                        "payment_method",
+                    "created_at":
+                        "created_at",
+                    "updated_at":
+                        "updated_at",
+                },
+                default_sort=[
+                    "-payment_date",
+                    "-created_at",
+                ],
+                stable_sort_field="id",
+                default_page_size=25,
+                maximum_page_size=100,
+            )
+        )
+
+    except APIQueryPipelineError as exc:
+        return (
+            APIResponseService
+            .validation_error(
+                message=exc.message,
+                details={
+                    "component":
+                        exc.component,
+                    "fields":
+                        exc.details,
+                },
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "payments": (
+                    CustomerPaymentAPISerializer
+                    .serialize_many(
+                        pipeline_result[
+                            "items"
+                        ]
+                    )
+                ),
+                "pagination": (
+                    pipeline_result[
+                        "pagination"
+                    ]
+                ),
+                "query": (
+                    pipeline_result[
+                        "query"
+                    ]
+                ),
+            },
+            message=(
+                "Customer payments retrieved "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+
+@api_login_required
+@api_rate_limit(
+    scope="customer_payments.detail",
+    limit=120,
+    window_seconds=60,
+)
+def customer_payment_detail_api(
+    request,
+    payment_id,
+):
+    if request.method != "GET":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use GET to retrieve "
+                    "a customer payment."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "customer_payments.read",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    try:
+        payment = (
+            CustomerPaymentAPIService
+            .get_payment(
+                organization=(
+                    request.api_organization
+                ),
+                payment_id=payment_id,
+            )
+        )
+
+    except (
+        CustomerPaymentAPIValidationError
+    ) as exc:
+        return (
+            APIResponseService
+            .validation_error(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        )
+
+    except LookupError:
+        return (
+            APIResponseService
+            .not_found(
+                message=(
+                    "Customer payment "
+                    "not found."
+                ),
+                request=request,
+            )
+        )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "payment": (
+                    CustomerPaymentAPISerializer
+                    .serialize_detail(
+                        payment
+                    )
+                ),
+            },
+            message=(
+                "Customer payment retrieved "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="accounts_receivable.summary",
+    limit=120,
+    window_seconds=60,
+)
+def accounts_receivable_api(
+    request,
+):
+    if request.method != "GET":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use GET to retrieve "
+                    "accounts receivable."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "invoices.read",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    result = (
+        CustomerPaymentAPIService
+        .get_receivable_summary(
+            organization=(
+                request.api_organization
+            ),
+        )
+    )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "accounts_receivable": (
+                    AccountsReceivableAPISerializer
+                    .serialize_summary(
+                        result
+                    )
+                ),
+            },
+            message=(
+                "Accounts receivable retrieved "
+                "successfully."
+            ),
+            request=request,
+        )
+    )
+
+
+@api_login_required
+@api_rate_limit(
+    scope="accounts_receivable.aging",
+    limit=120,
+    window_seconds=60,
+)
+def accounts_receivable_aging_api(
+    request,
+):
+    if request.method != "GET":
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use GET to retrieve "
+                    "receivable aging."
+                ),
+                request=request,
+            )
+        )
+
+    if not (
+        AuthorizationService
+        .has_permission(
+            request.api_user,
+            "invoices.read",
+        )
+    ):
+        return (
+            APIResponseService
+            .forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+        )
+
+    result = (
+        CustomerPaymentAPIService
+        .get_aging_summary(
+            organization=(
+                request.api_organization
+            ),
+        )
+    )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "aging": (
+                    AccountsReceivableAPISerializer
+                    .serialize_aging(
+                        result
+                    )
+                ),
+            },
+            message=(
+                "Receivable aging retrieved "
+                "successfully."
+            ),
             request=request,
         )
     )

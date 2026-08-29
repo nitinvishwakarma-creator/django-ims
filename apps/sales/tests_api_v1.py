@@ -1,6 +1,6 @@
 import json
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -32,11 +32,12 @@ from apps.organizations.api_context_service import (
     APIOrganizationContextService,
 )
 from apps.sales.api.v1.serializers import (
-    CustomerAPISerializer,
-    SalesOrderAPISerializer,
+    AccountsReceivableAPISerializer,
     BankAccountLookupAPISerializer,
+    CustomerAPISerializer,
     CustomerPaymentAPISerializer,
     InvoiceAPISerializer,
+    SalesOrderAPISerializer,
 )
 from apps.finance.repositories.bank_account_repository import (
     BankAccountRepository,
@@ -44,10 +45,17 @@ from apps.finance.repositories.bank_account_repository import (
 from apps.sales.repositories.invoice_repository import (
     InvoiceRepository,
 )
+from apps.sales.repositories.payment_repository import (
+    PaymentRepository,
+)
 from apps.sales.services.invoice_api_service import (
     InvoiceAPIService,
     InvoiceAPIStateError,
     InvoiceAPIValidationError,
+)
+from apps.sales.services.customer_payment_api_service import (
+    CustomerPaymentAPIService,
+    CustomerPaymentAPIValidationError,
 )
 from apps.sales.services.invoice_service import (
     InvoiceService,
@@ -2289,6 +2297,20 @@ class InvoiceAPIV1RegressionTestCase(
     BANK_ACCOUNTS_URL = (
         "/api/v1/invoice-bank-accounts/"
     )
+    CUSTOMER_PAYMENTS_URL = (
+        "/api/v1/customer-payments/"
+    )
+
+    ACCOUNTS_RECEIVABLE_URL = (
+        "/api/v1/accounts-receivable/"
+    )
+
+    RECEIVABLE_AGING_URL = (
+        (
+            "/api/v1/"
+            "accounts-receivable/aging/"
+        )
+    )
 
     def setUp(self):
         now = datetime.utcnow()
@@ -2542,6 +2564,20 @@ class InvoiceAPIV1RegressionTestCase(
         ):
             patcher.stop()
 
+    def payment_detail_url(
+        self,
+        payment=None,
+    ):
+        payment = (
+            payment
+            or
+            self.payment
+        )
+
+        return (
+            f"{self.CUSTOMER_PAYMENTS_URL}"
+            f"{payment.id}/"
+        )
     def detail_url(self):
         return (
             f"{self.INVOICES_URL}"
@@ -3347,6 +3383,616 @@ class InvoiceAPIV1RegressionTestCase(
     ):
         response = self.client.delete(
             self.INVOICES_URL
+        )
+
+        self.assert_error_contract(
+            response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+    # ==================================================
+    # CUSTOMER PAYMENT LIST
+    # ==================================================
+
+    def test_anonymous_payment_list_is_rejected(
+        self,
+    ):
+        with patch.object(
+            APIOrganizationContextService,
+            "resolve",
+            side_effect=PermissionError(
+                "Not authenticated."
+            ),
+        ):
+            response = self.client.get(
+                self.CUSTOMER_PAYMENTS_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            401,
+            "UNAUTHORIZED",
+        )
+
+    def test_payment_list_uses_query_pipeline(
+        self,
+    ):
+        pipeline_result = {
+            "items": [
+                self.payment,
+            ],
+            "pagination": {
+                "page": 1,
+                "page_size": 25,
+                "total_items": 1,
+                "total_pages": 1,
+                "has_next": False,
+                "has_previous": False,
+            },
+            "query": {
+                "search": None,
+                "filters": {},
+                "sort": [
+                    "-payment_date",
+                    "-created_at",
+                    "id",
+                ],
+            },
+        }
+
+        with (
+            patch.object(
+                PaymentRepository,
+                "queryset_for_organization",
+                return_value=object(),
+            ),
+            patch.object(
+                APIQueryPipelineService,
+                "execute",
+                return_value=pipeline_result,
+            ) as pipeline_mock,
+        ):
+            response = self.client.get(
+                self.CUSTOMER_PAYMENTS_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["payments"][0][
+                "payment_number"
+            ],
+            self.payment.payment_number,
+        )
+
+        pipeline_mock.assert_called_once()
+
+    def test_payment_list_without_permission_is_forbidden(
+        self,
+    ):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.get(
+                self.CUSTOMER_PAYMENTS_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+    def test_payment_list_query_error_uses_contract(
+        self,
+    ):
+        pipeline_error = (
+            APIQueryPipelineError(
+                component="filtering",
+                message=(
+                    "Unsupported filter value."
+                ),
+                details={
+                    "customer_id": [
+                        (
+                            "Enter a valid "
+                            "identifier."
+                        ),
+                    ],
+                },
+            )
+        )
+
+        with (
+            patch.object(
+                PaymentRepository,
+                "queryset_for_organization",
+                return_value=object(),
+            ),
+            patch.object(
+                APIQueryPipelineService,
+                "execute",
+                side_effect=pipeline_error,
+            ),
+        ):
+            response = self.client.get(
+                (
+                    f"{self.CUSTOMER_PAYMENTS_URL}"
+                    "?customer_id=invalid-id"
+                )
+            )
+
+        body = self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+        self.assertEqual(
+            body["error"]["details"][
+                "component"
+            ],
+            "filtering",
+        )
+
+    # ==================================================
+    # CUSTOMER PAYMENT DETAIL
+    # ==================================================
+
+    def test_customer_payment_detail(
+        self,
+    ):
+        with patch.object(
+            CustomerPaymentAPIService,
+            "get_payment",
+            return_value=self.payment,
+        ) as get_mock:
+            response = self.client.get(
+                self.payment_detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["payment"][
+                "payment_number"
+            ],
+            self.payment.payment_number,
+        )
+
+        self.assertEqual(
+            body["data"]["payment"][
+                "allocations"
+            ][0]["invoice"][
+                "invoice_number"
+            ],
+            self.invoice.invoice_number,
+        )
+
+        get_mock.assert_called_once_with(
+            organization=self.organization,
+            payment_id=str(
+                self.payment.id
+            ),
+        )
+
+    def test_missing_payment_returns_not_found(
+        self,
+    ):
+        with patch.object(
+            CustomerPaymentAPIService,
+            "get_payment",
+            side_effect=LookupError(
+                "Customer payment not found."
+            ),
+        ):
+            response = self.client.get(
+                self.payment_detail_url()
+            )
+
+        self.assert_error_contract(
+            response,
+            404,
+            "NOT_FOUND",
+        )
+
+    def test_malformed_payment_id_is_validation_error(
+        self,
+    ):
+        response = self.client.get(
+            (
+                f"{self.CUSTOMER_PAYMENTS_URL}"
+                "invalid-id/"
+            )
+        )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_payment_serializer_has_safe_summary(
+        self,
+    ):
+        serialized = (
+            CustomerPaymentAPISerializer
+            .serialize_summary(
+                self.payment
+            )
+        )
+
+        self.assertEqual(
+            serialized["id"],
+            str(
+                self.payment.id
+            ),
+        )
+
+        self.assertEqual(
+            serialized[
+                "allocation_count"
+            ],
+            1,
+        )
+
+        self.assertEqual(
+            serialized["bank_account"][
+                "masked_account_number"
+            ],
+            "••••7890",
+        )
+
+        self.assertNotIn(
+            "organization",
+            serialized,
+        )
+
+        self.assertNotIn(
+            "account_number",
+            serialized[
+                "bank_account"
+            ],
+        )
+
+    def test_service_rejects_malformed_payment_id(
+        self,
+    ):
+        with self.assertRaises(
+            CustomerPaymentAPIValidationError
+        ) as context:
+            (
+                CustomerPaymentAPIService
+                .get_payment(
+                    organization=(
+                        self.organization
+                    ),
+                    payment_id="invalid-id",
+                )
+            )
+
+        self.assertIn(
+            "payment_id",
+            context.exception.details,
+        )
+
+    # ==================================================
+    # ACCOUNTS RECEIVABLE
+    # ==================================================
+
+    def test_accounts_receivable_summary(
+        self,
+    ):
+        now = datetime.utcnow()
+
+        result = {
+            "as_of": now,
+            "invoice_count": 1,
+            "overdue_invoice_count": 1,
+            "customer_count": 1,
+            "total_outstanding":
+                Decimal("124.20"),
+            "total_current":
+                Decimal("0.00"),
+            "total_overdue":
+                Decimal("124.20"),
+            "customers": [
+                {
+                    "customer":
+                        self.customer,
+                    "invoice_count": 1,
+                    "overdue_invoice_count":
+                        1,
+                    "total_outstanding":
+                        Decimal("124.20"),
+                    "total_overdue":
+                        Decimal("124.20"),
+                },
+            ],
+        }
+
+        with patch.object(
+            CustomerPaymentAPIService,
+            "get_receivable_summary",
+            return_value=result,
+        ):
+            response = self.client.get(
+                self.ACCOUNTS_RECEIVABLE_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        receivable = body["data"][
+            "accounts_receivable"
+        ]
+
+        self.assertEqual(
+            receivable[
+                "total_outstanding"
+            ],
+            "124.20",
+        )
+
+        self.assertEqual(
+            receivable["customers"][0][
+                "customer"
+            ]["id"],
+            str(
+                self.customer.id
+            ),
+        )
+
+    def test_accounts_receivable_without_permission_is_forbidden(
+        self,
+    ):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.get(
+                self.ACCOUNTS_RECEIVABLE_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+    def test_receivable_aging_summary(
+        self,
+    ):
+        now = datetime.utcnow()
+
+        result = {
+            "as_of": now,
+            "invoice_count": 1,
+            "total_outstanding":
+                Decimal("124.20"),
+            "buckets": {
+                "current": {
+                    "label": "Current",
+                    "minimum_days": None,
+                    "maximum_days": 0,
+                    "invoice_count": 0,
+                    "amount":
+                        Decimal("0.00"),
+                },
+                "days_1_30": {
+                    "label": "1–30 days",
+                    "minimum_days": 1,
+                    "maximum_days": 30,
+                    "invoice_count": 1,
+                    "amount":
+                        Decimal("124.20"),
+                },
+                "days_31_60": {
+                    "label": "31–60 days",
+                    "minimum_days": 31,
+                    "maximum_days": 60,
+                    "invoice_count": 0,
+                    "amount":
+                        Decimal("0.00"),
+                },
+                "days_61_90": {
+                    "label": "61–90 days",
+                    "minimum_days": 61,
+                    "maximum_days": 90,
+                    "invoice_count": 0,
+                    "amount":
+                        Decimal("0.00"),
+                },
+                "days_over_90": {
+                    "label": "Over 90 days",
+                    "minimum_days": 91,
+                    "maximum_days": None,
+                    "invoice_count": 0,
+                    "amount":
+                        Decimal("0.00"),
+                },
+            },
+            "invoices": [
+                {
+                    "invoice":
+                        self.invoice,
+                    "net_receivable":
+                        Decimal("124.20"),
+                    "due_date":
+                        self.invoice.due_date,
+                    "overdue_days": 10,
+                    "is_overdue": True,
+                    "bucket":
+                        "days_1_30",
+                },
+            ],
+        }
+
+        with patch.object(
+            CustomerPaymentAPIService,
+            "get_aging_summary",
+            return_value=result,
+        ):
+            response = self.client.get(
+                self.RECEIVABLE_AGING_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        aging = body["data"][
+            "aging"
+        ]
+
+        self.assertEqual(
+            aging["buckets"][
+                "days_1_30"
+            ]["amount"],
+            "124.20",
+        )
+
+        self.assertEqual(
+            aging["invoices"][0][
+                "overdue_days"
+            ],
+            10,
+        )
+
+    def test_service_assigns_receivable_aging_buckets(
+        self,
+    ):
+        as_of = datetime(
+            2026,
+            8,
+            29,
+            12,
+            0,
+            0,
+        )
+
+        current_invoice = (
+            SimpleNamespace(
+                **{
+                    **vars(
+                        self.invoice
+                    ),
+                    "id":
+                        ObjectId(),
+                    "due_date":
+                        (
+                            as_of
+                            +
+                            timedelta(
+                                days=5
+                            )
+                        ),
+                }
+            )
+        )
+
+        overdue_invoice = (
+            SimpleNamespace(
+                **{
+                    **vars(
+                        self.invoice
+                    ),
+                    "id":
+                        ObjectId(),
+                    "due_date":
+                        (
+                            as_of
+                            -
+                            timedelta(
+                                days=45
+                            )
+                        ),
+                }
+            )
+        )
+
+        with (
+            patch.object(
+                InvoiceRepository,
+                "list_outstanding",
+                return_value=[
+                    current_invoice,
+                    overdue_invoice,
+                ],
+            ),
+            patch.object(
+                InvoiceService,
+                "get_invoice_net_receivable",
+                side_effect=[
+                    Decimal("50.00"),
+                    Decimal("75.00"),
+                ],
+            ),
+        ):
+            result = (
+                CustomerPaymentAPIService
+                .get_aging_summary(
+                    organization=(
+                        self.organization
+                    ),
+                    as_of=as_of,
+                )
+            )
+
+        self.assertEqual(
+            result["buckets"][
+                "current"
+            ]["invoice_count"],
+            1,
+        )
+
+        self.assertEqual(
+            result["buckets"][
+                "days_31_60"
+            ]["invoice_count"],
+            1,
+        )
+
+        self.assertEqual(
+            result["total_outstanding"],
+            Decimal("125.00"),
+        )
+
+    # ==================================================
+    # METHOD RESTRICTIONS
+    # ==================================================
+
+    def test_payment_collection_rejects_post(
+        self,
+    ):
+        response = self.client.post(
+            self.CUSTOMER_PAYMENTS_URL,
+            data=json.dumps({}),
+            content_type="application/json",
+        )
+
+        self.assert_error_contract(
+            response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+    def test_receivable_summary_rejects_post(
+        self,
+    ):
+        response = self.client.post(
+            self.ACCOUNTS_RECEIVABLE_URL,
+            data=json.dumps({}),
+            content_type="application/json",
         )
 
         self.assert_error_contract(

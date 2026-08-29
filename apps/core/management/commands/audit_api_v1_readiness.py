@@ -564,6 +564,47 @@ class Command(
             ),
         )
         check(
+            "Customer payment collection route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "customer-payments/"
+                )
+            ),
+        )
+
+        check(
+            "Customer payment detail route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "customer-payments/"
+                    "audit-payment-id/"
+                )
+            ),
+        )
+
+        check(
+            "Accounts receivable route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "accounts-receivable/"
+                )
+            ),
+        )
+
+        check(
+            "Receivable aging route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "accounts-receivable/"
+                    "aging/"
+                )
+            ),
+        )
+        check(
             "Supplier collection route available",
             route_exists(
                 "/api/v1/suppliers/"
@@ -959,7 +1000,19 @@ class Command(
                     {},
                 )
             )
+            payment_endpoints = (
+                manifest_endpoints.get(
+                    "customer_payments",
+                    {},
+                )
+            )
 
+            receivable_endpoints = (
+                manifest_endpoints.get(
+                    "accounts_receivable",
+                    {},
+                )
+            )
             supplier_endpoints = (
                 manifest_endpoints.get(
                     "suppliers",
@@ -1137,6 +1190,91 @@ class Command(
                     )
                     ==
                     "masked"
+                ),
+            )
+            check(
+                (
+                    "Discovery exposes customer "
+                    "payment endpoints"
+                ),
+                (
+                    payment_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    (
+                        "/api/v1/"
+                        "customer-payments/"
+                    )
+                    and
+                    payment_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "immutable"
+                    )
+                    is True
+                    and
+                    payment_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "sensitive_account_numbers"
+                    )
+                    ==
+                    "masked"
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes accounts "
+                    "receivable endpoints"
+                ),
+                (
+                    receivable_endpoints
+                    .get(
+                        "summary",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    (
+                        "/api/v1/"
+                        "accounts-receivable/"
+                    )
+                    and
+                    receivable_endpoints
+                    .get(
+                        "aging",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    receivable_endpoints
+                    .get(
+                        "aging",
+                        {},
+                    )
+                    .get(
+                        "credit_notes_reduce_receivable"
+                    )
+                    is True
                 ),
             )
             check(

@@ -128,4 +128,34 @@ urlpatterns = [
         views.invoice_detail_api,
         name="invoice_detail",
     ),
+    path(
+        "customer-payments/",
+        views.customer_payment_collection_api,
+        name=(
+            "customer_payment_collection"
+        ),
+    ),
+
+    path(
+        (
+            "customer-payments/"
+            "<str:payment_id>/"
+        ),
+        views.customer_payment_detail_api,
+        name="customer_payment_detail",
+    ),
+
+    path(
+        "accounts-receivable/",
+        views.accounts_receivable_api,
+        name="accounts_receivable",
+    ),
+
+    path(
+        "accounts-receivable/aging/",
+        views.accounts_receivable_aging_api,
+        name=(
+            "accounts_receivable_aging"
+        ),
+    ),
 ]

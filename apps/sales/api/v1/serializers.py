@@ -810,7 +810,7 @@ class InvoiceAPISerializer:
 class CustomerPaymentAPISerializer:
 
     @staticmethod
-    def serialize_detail(
+    def serialize_summary(
         payment,
     ):
         if not payment:
@@ -855,6 +855,42 @@ class CustomerPaymentAPISerializer:
                     or
                     None
                 ),
+            "allocation_count":
+                len(
+                    payment.allocations
+                    or
+                    []
+                ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    payment.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    payment.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        payment,
+    ):
+        if not payment:
+            return None
+
+        summary = (
+            CustomerPaymentAPISerializer
+            .serialize_summary(
+                payment
+            )
+        )
+
+        return {
+            **summary,
             "allocations": [
                 {
                     "invoice": {
@@ -871,6 +907,31 @@ class CustomerPaymentAPISerializer:
                             .invoice
                             .invoice_number
                         ),
+                        "status": (
+                            allocation
+                            .invoice
+                            .status
+                        ),
+                        "invoice_date": (
+                            APISerializationService
+                            .serialize_datetime(
+                                allocation
+                                .invoice
+                                .invoice_date
+                            )
+                        ),
+                        "total_amount":
+                            str(
+                                allocation
+                                .invoice
+                                .total_amount
+                            ),
+                        "balance_due":
+                            str(
+                                allocation
+                                .invoice
+                                .balance_due
+                            ),
                     },
                     "amount":
                         str(
@@ -896,10 +957,238 @@ class CustomerPaymentAPISerializer:
                     payment.created_by
                 )
             ),
-            "created_at": (
+        }
+
+    @staticmethod
+    def serialize_many(
+        payments,
+    ):
+        return [
+            (
+                CustomerPaymentAPISerializer
+                .serialize_summary(
+                    payment
+                )
+            )
+            for payment
+            in payments
+        ]
+
+class AccountsReceivableAPISerializer:
+
+    @staticmethod
+    def serialize_summary(
+        result,
+    ):
+        return {
+            "as_of": (
                 APISerializationService
                 .serialize_datetime(
-                    payment.created_at
+                    result["as_of"]
                 )
             ),
+            "invoice_count":
+                result[
+                    "invoice_count"
+                ],
+            "overdue_invoice_count": (
+                result[
+                    "overdue_invoice_count"
+                ]
+            ),
+            "customer_count":
+                result[
+                    "customer_count"
+                ],
+            "total_outstanding":
+                str(
+                    result[
+                        "total_outstanding"
+                    ]
+                ),
+            "total_current":
+                str(
+                    result[
+                        "total_current"
+                    ]
+                ),
+            "total_overdue":
+                str(
+                    result[
+                        "total_overdue"
+                    ]
+                ),
+            "customers": [
+                {
+                    "customer": (
+                        CustomerAPISerializer
+                        .serialize_summary(
+                            item[
+                                "customer"
+                            ]
+                        )
+                    ),
+                    "invoice_count":
+                        item[
+                            "invoice_count"
+                        ],
+                    "overdue_invoice_count": (
+                        item[
+                            "overdue_invoice_count"
+                        ]
+                    ),
+                    "total_outstanding":
+                        str(
+                            item[
+                                "total_outstanding"
+                            ]
+                        ),
+                    "total_overdue":
+                        str(
+                            item[
+                                "total_overdue"
+                            ]
+                        ),
+                }
+                for item
+                in result[
+                    "customers"
+                ]
+            ],
+        }
+
+    @staticmethod
+    def serialize_aging(
+        result,
+    ):
+        serialized_buckets = {}
+
+        for (
+            key,
+            bucket,
+        ) in result[
+            "buckets"
+        ].items():
+            serialized_buckets[
+                key
+            ] = {
+                "label":
+                    bucket[
+                        "label"
+                    ],
+                "minimum_days":
+                    bucket[
+                        "minimum_days"
+                    ],
+                "maximum_days":
+                    bucket[
+                        "maximum_days"
+                    ],
+                "invoice_count":
+                    bucket[
+                        "invoice_count"
+                    ],
+                "amount":
+                    str(
+                        bucket[
+                            "amount"
+                        ]
+                    ),
+            }
+
+        serialized_invoices = []
+
+        for item in result[
+            "invoices"
+        ]:
+            invoice = item[
+                "invoice"
+            ]
+
+            serialized_invoices.append({
+                "invoice": {
+                    "id": (
+                        APISerializationService
+                        .serialize_identifier(
+                            invoice.id
+                        )
+                    ),
+                    "invoice_number":
+                        invoice.invoice_number,
+                    "status":
+                        invoice.status,
+                    "invoice_date": (
+                        APISerializationService
+                        .serialize_datetime(
+                            invoice.invoice_date
+                        )
+                    ),
+                    "due_date": (
+                        APISerializationService
+                        .serialize_datetime(
+                            invoice.due_date
+                        )
+                    ),
+                    "total_amount":
+                        str(
+                            invoice.total_amount
+                        ),
+                    "amount_paid":
+                        str(
+                            invoice.amount_paid
+                        ),
+                    "balance_due":
+                        str(
+                            invoice.balance_due
+                        ),
+                },
+                "customer": (
+                    CustomerAPISerializer
+                    .serialize_summary(
+                        invoice.customer
+                    )
+                ),
+                "net_receivable":
+                    str(
+                        item[
+                            "net_receivable"
+                        ]
+                    ),
+                "overdue_days":
+                    item[
+                        "overdue_days"
+                    ],
+                "is_overdue":
+                    bool(
+                        item[
+                            "is_overdue"
+                        ]
+                    ),
+                "bucket":
+                    item[
+                        "bucket"
+                    ],
+            })
+
+        return {
+            "as_of": (
+                APISerializationService
+                .serialize_datetime(
+                    result["as_of"]
+                )
+            ),
+            "invoice_count":
+                result[
+                    "invoice_count"
+                ],
+            "total_outstanding":
+                str(
+                    result[
+                        "total_outstanding"
+                    ]
+                ),
+            "buckets":
+                serialized_buckets,
+            "invoices":
+                serialized_invoices,
         }

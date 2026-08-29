@@ -1182,6 +1182,123 @@ class APIDiscoveryService:
             },
         }
     @staticmethod
+    def get_customer_payment_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "customer-payments/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "customer_payments.read",
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "customer_id":
+                        "object_id",
+                    "invoice_id":
+                        "object_id",
+                    "bank_account_id":
+                        "object_id",
+                    "payment_method":
+                        "string",
+                },
+                "immutable":
+                    True,
+                "status":
+                    "available",
+            },
+
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "customer-payments/"
+                    "{payment_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "customer_payments.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "sensitive_account_numbers":
+                    "masked",
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_accounts_receivable_endpoints():
+        return {
+            "summary": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "accounts-receivable/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "invoices.read",
+                "includes": [
+                    "current_receivables",
+                    "overdue_receivables",
+                    "customer_totals",
+                ],
+                "status":
+                    "available",
+            },
+
+            "aging": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "accounts-receivable/"
+                    "aging/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "invoices.read",
+                "buckets": [
+                    "current",
+                    "days_1_30",
+                    "days_31_60",
+                    "days_61_90",
+                    "days_over_90",
+                ],
+                "credit_notes_reduce_receivable":
+                    True,
+                "status":
+                    "available",
+            },
+        }
+    @staticmethod
     def get_supplier_endpoints():
         return {
             "collection": {
@@ -1689,6 +1806,17 @@ class APIDiscoveryService:
                     (
                         APIDiscoveryService
                         .get_invoice_endpoints()
+                    ),
+                "customer_payments":
+                    (
+                        APIDiscoveryService
+                        .get_customer_payment_endpoints()
+                    ),
+
+                "accounts_receivable":
+                    (
+                        APIDiscoveryService
+                        .get_accounts_receivable_endpoints()
                     ),
                 "suppliers":
                     (

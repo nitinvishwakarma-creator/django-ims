@@ -1,7 +1,9 @@
 from apps.core.services.api_serialization_service import (
     APISerializationService,
 )
-
+from apps.inventory.api.v1.serializers import (
+    WarehouseAPISerializer,
+)
 
 class SupplierAPISerializer:
 
@@ -378,4 +380,187 @@ class PurchaseOrderAPISerializer:
             )
             for purchase_order
             in purchase_orders
+        ]
+
+class GoodsReceiptItemAPISerializer:
+
+    @staticmethod
+    def serialize(
+        item,
+    ):
+        if not item:
+            return None
+
+        product = item.product
+
+        return {
+            "product": {
+                "id": (
+                    APISerializationService
+                    .serialize_identifier(
+                        product.id
+                    )
+                ),
+                "sku": product.sku,
+                "name": product.name,
+                "unit": product.unit,
+            },
+            "quantity_received": str(
+                item.quantity_received
+            ),
+        }
+
+
+class GoodsReceiptAPISerializer:
+
+    @staticmethod
+    def serialize_summary(
+        goods_receipt,
+    ):
+        if not goods_receipt:
+            return None
+
+        supplier = (
+            goods_receipt.supplier
+        )
+
+        warehouse = (
+            goods_receipt.warehouse
+        )
+
+        purchase_order = (
+            goods_receipt.purchase_order
+        )
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    goods_receipt.id
+                )
+            ),
+            "grn_number":
+                goods_receipt.grn_number,
+            "purchase_order": {
+                "id": (
+                    APISerializationService
+                    .serialize_identifier(
+                        purchase_order.id
+                    )
+                ),
+                "po_number":
+                    purchase_order.po_number,
+                "status":
+                    purchase_order.status,
+            },
+            "supplier": (
+                SupplierAPISerializer
+                .serialize_summary(
+                    supplier
+                )
+            ),
+            "warehouse": {
+                "id": (
+                    APISerializationService
+                    .serialize_identifier(
+                        warehouse.id
+                    )
+                ),
+                "code":
+                    warehouse.code,
+                "name":
+                    warehouse.name,
+            },
+            "item_count": len(
+                goods_receipt.items
+                or []
+            ),
+            "received_at": (
+                goods_receipt
+                .received_at
+                .isoformat()
+                if goods_receipt.received_at
+                else None
+            ),
+            "created_at": (
+                goods_receipt
+                .created_at
+                .isoformat()
+                if goods_receipt.created_at
+                else None
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        goods_receipt,
+    ):
+        if not goods_receipt:
+            return None
+
+        data = (
+            GoodsReceiptAPISerializer
+            .serialize_summary(
+                goods_receipt
+            )
+        )
+
+        data.update(
+            {
+                "items": [
+                    (
+                        GoodsReceiptItemAPISerializer
+                        .serialize(item)
+                    )
+                    for item
+                    in (
+                        goods_receipt.items
+                        or []
+                    )
+                ],
+                "notes": (
+                    goods_receipt.notes
+                    or
+                    None
+                ),
+                "received_by": (
+                    {
+                        "id": (
+                            APISerializationService
+                            .serialize_identifier(
+                                goods_receipt
+                                .received_by
+                                .id
+                            )
+                        ),
+                        "email": (
+                            goods_receipt
+                            .received_by
+                            .email
+                        ),
+                    }
+                    if goods_receipt.received_by
+                    else None
+                ),
+            }
+        )
+
+        return data
+
+    @staticmethod
+    def serialize_many(
+        goods_receipts,
+    ):
+        return [
+            (
+                GoodsReceiptAPISerializer
+                .serialize_summary(
+                    goods_receipt
+                )
+            )
+            for goods_receipt
+            in (
+                goods_receipts
+                or []
+            )
         ]

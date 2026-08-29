@@ -1523,6 +1523,57 @@ class APIDiscoveryService:
         }
 
     @staticmethod
+    def get_goods_receipt_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "goods-receipts/"
+                ),
+                "authentication_required": True,
+                "tenant_scoped": True,
+                "permissions": {
+                    "GET":
+                        "goods_receipts.read",
+                    "POST":
+                        "goods_receipts.create",
+                },
+                "query_capabilities": [
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "create_fields": [
+                    "purchase_order_id",
+                    "warehouse_id",
+                    "items",
+                    "notes",
+                ],
+                "status": "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "goods-receipts/"
+                    "{goods_receipt_id}/"
+                ),
+                "authentication_required": True,
+                "tenant_scoped": True,
+                "permission":
+                    "goods_receipts.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status": "available",
+            },
+        }
+    @staticmethod
     def get_warehouse_endpoints():
         return {
             "collection": {
@@ -1950,6 +2001,10 @@ class APIDiscoveryService:
                         APIDiscoveryService
                         .get_purchase_order_endpoints()
                     ),
+                "goods_receipts": (
+                    APIDiscoveryService
+                    .get_goods_receipt_endpoints()
+                ),
                 "warehouses":
                     (
                         APIDiscoveryService

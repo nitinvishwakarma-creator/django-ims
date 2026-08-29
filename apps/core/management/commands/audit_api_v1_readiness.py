@@ -685,6 +685,23 @@ class Command(
             ),
         )
         check(
+            "Goods Receipt collection route available",
+            route_exists(
+                "/api/v1/goods-receipts/",
+            ),
+        )
+
+        check(
+            "Goods Receipt detail route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "goods-receipts/"
+                    "audit-goods-receipt-id/"
+                ),
+            ),
+        )
+        check(
             "Warehouse collection route available",
             route_exists(
                 "/api/v1/warehouses/"
@@ -1065,6 +1082,12 @@ class Command(
             purchase_order_endpoints = (
                 manifest_endpoints.get(
                     "purchase_orders",
+                    {},
+                )
+            )
+            goods_receipt_endpoints = (
+                manifest_endpoints.get(
+                    "goods_receipts",
                     {},
                 )
             )
@@ -1667,6 +1690,44 @@ class Command(
                     )
                     ==
                     "not_found"
+                ),
+            )
+            check(
+                "Discovery exposes goods receipt endpoints",
+                bool(
+                    goods_receipt_endpoints
+                ),
+            )
+
+            check(
+                "Discovery documents goods receipt creation",
+                (
+                    "POST"
+                    in goods_receipt_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "methods",
+                        [],
+                    )
+                ),
+            )
+
+            check(
+                "Discovery documents goods receipt detail",
+                (
+                    "GET"
+                    in goods_receipt_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "methods",
+                        [],
+                    )
                 ),
             )
             check(

@@ -5,7 +5,9 @@ from django.urls import (
 from apps.purchasing.api.v1 import (
     views,
 )
-
+from apps.purchasing.api.v1 import (
+    goods_receipt_views,
+)
 
 app_name = "purchasing_api_v1"
 
@@ -73,5 +75,19 @@ urlpatterns = [
         ),
         views.purchase_order_detail_api,
         name="purchase_order_detail",
+    ),
+    path(
+        "goods-receipts/",
+        goods_receipt_views
+        .goods_receipt_collection_api,
+        name="goods_receipt_collection",
+    ),
+
+    path(
+        "goods-receipts/"
+        "<str:goods_receipt_id>/",
+        goods_receipt_views
+        .goods_receipt_detail_api,
+        name="goods_receipt_detail",
     ),
 ]

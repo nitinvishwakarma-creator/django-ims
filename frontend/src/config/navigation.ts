@@ -3,17 +3,18 @@ import type {
 } from "lucide-react";
 
 import {
-  CircleDollarSign,
-  PackageCheck,
   ArrowDownUp,
   Banknote,
   Boxes,
   Building2,
   ChartNoAxesCombined,
+  CircleDollarSign,
   ClipboardList,
+  FileMinus2,
   FileText,
   LayoutDashboard,
   Package,
+  PackageCheck,
   ReceiptText,
   Settings,
   ShieldCheck,
@@ -174,6 +175,13 @@ export const navigationSections:
           href: "/purchase-returns",
           icon: Undo2,
           permission: "purchase_returns.read",
+        },
+        {
+          label: "Vendor Debit Notes",
+          href: "/vendor-debit-notes",
+          icon: FileMinus2,
+          permission:
+            "vendor_debit_notes.read",
         },
       ],
     },

@@ -1399,6 +1399,128 @@ class APIDiscoveryService:
             },
         }
 
+    @staticmethod
+    def get_purchase_order_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "purchase-orders/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "purchase_orders.read",
+                    "POST":
+                        "purchase_orders.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "supplier_id":
+                        "object_id",
+                    "status":
+                        "string",
+                },
+                "create_fields": [
+                    "supplier_id",
+                    "order_date",
+                    "expected_delivery_date",
+                    "items",
+                    "notes",
+                ],
+                "status":
+                    "available",
+            },
+
+            "detail": {
+                "methods": [
+                    "GET",
+                    "PATCH",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "purchase-orders/"
+                    "{purchase_order_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "purchase_orders.read",
+                    "PATCH":
+                        "purchase_orders.update",
+                },
+                "editable_statuses": [
+                    "DRAFT",
+                ],
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+
+            "confirm": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "purchase-orders/"
+                    "{purchase_order_id}/"
+                    "confirm/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "purchase_orders.update",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "status":
+                    "available",
+            },
+
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "purchase-orders/"
+                    "{purchase_order_id}/"
+                    "cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "purchase_orders.cancel",
+                "blocked_statuses": [
+                    "PARTIALLY_RECEIVED",
+                    "RECEIVED",
+                    "CANCELLED",
+                ],
+                "status":
+                    "available",
+            },
+        }
 
     @staticmethod
     def get_warehouse_endpoints():
@@ -1822,6 +1944,11 @@ class APIDiscoveryService:
                     (
                         APIDiscoveryService
                         .get_supplier_endpoints()
+                    ),
+                "purchase_orders":
+                    (
+                        APIDiscoveryService
+                        .get_purchase_order_endpoints()
                     ),
                 "warehouses":
                     (

@@ -640,7 +640,50 @@ class Command(
                 )
             ),
         )
+        check(
+            "Purchase Order collection route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "purchase-orders/"
+                )
+            ),
+        )
 
+        check(
+            "Purchase Order detail route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "purchase-orders/"
+                    "audit-purchase-order-id/"
+                )
+            ),
+        )
+
+        check(
+            "Purchase Order confirmation route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "purchase-orders/"
+                    "audit-purchase-order-id/"
+                    "confirm/"
+                )
+            ),
+        )
+
+        check(
+            "Purchase Order cancellation route available",
+            route_exists(
+                (
+                    "/api/v1/"
+                    "purchase-orders/"
+                    "audit-purchase-order-id/"
+                    "cancel/"
+                )
+            ),
+        )
         check(
             "Warehouse collection route available",
             route_exists(
@@ -1019,7 +1062,12 @@ class Command(
                     {},
                 )
             )
-
+            purchase_order_endpoints = (
+                manifest_endpoints.get(
+                    "purchase_orders",
+                    {},
+                )
+            )
             warehouse_endpoints = (
                 manifest_endpoints.get(
                     "warehouses",
@@ -1554,6 +1602,71 @@ class Command(
                     )
                     ==
                     "available"
+                ),
+            )
+            check(
+                (
+                    "Discovery exposes Purchase Order "
+                    "management endpoints"
+                ),
+                (
+                    purchase_order_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    (
+                        "/api/v1/"
+                        "purchase-orders/"
+                    )
+                    and
+                    purchase_order_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    purchase_order_endpoints
+                    .get(
+                        "confirm",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    purchase_order_endpoints
+                    .get(
+                        "cancel",
+                        {},
+                    )
+                    .get(
+                        "status"
+                    )
+                    ==
+                    "available"
+                    and
+                    purchase_order_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
                 ),
             )
             check(

@@ -1,9 +1,37 @@
-from datetime import datetime
+from datetime import (
+    datetime,
+)
 
-from apps.purchasing.models import PurchaseOrder
+from apps.purchasing.models import (
+    PurchaseOrder,
+)
 
 
 class PurchaseOrderRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        """
+        Return the tenant-scoped Purchase Order queryset.
+        """
+
+        if not organization:
+            return (
+                PurchaseOrder
+                .objects(
+                    id=None,
+                )
+            )
+
+        return (
+            PurchaseOrder
+            .objects(
+                organization=organization,
+            )
+        )
 
     @staticmethod
     def create_purchase_order(
@@ -32,7 +60,9 @@ class PurchaseOrderRepository:
             supplier=supplier,
             status=status,
             order_date=order_date,
-            expected_delivery_date=expected_delivery_date,
+            expected_delivery_date=(
+                expected_delivery_date
+            ),
             items=items,
             subtotal=subtotal,
             tax_amount=tax_amount,
@@ -53,13 +83,19 @@ class PurchaseOrderRepository:
         purchase_order_id,
     ):
         """
-        Get a purchase order within an organization.
+        Get a Purchase Order within an organization.
         """
 
-        return PurchaseOrder.objects(
-            organization=organization,
-            id=purchase_order_id,
-        ).first()
+        return (
+            PurchaseOrderRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                id=purchase_order_id,
+            )
+            .first()
+        )
 
     @staticmethod
     def get_by_po_number(
@@ -68,13 +104,19 @@ class PurchaseOrderRepository:
         po_number,
     ):
         """
-        Get a purchase order using its PO number.
+        Get a Purchase Order using its PO number.
         """
 
-        return PurchaseOrder.objects(
-            organization=organization,
-            po_number=po_number,
-        ).first()
+        return (
+            PurchaseOrderRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                po_number=po_number,
+            )
+            .first()
+        )
 
     @staticmethod
     def list_by_organization(
@@ -82,13 +124,18 @@ class PurchaseOrderRepository:
         organization,
     ):
         """
-        List all purchase orders for an organization.
+        List all Purchase Orders for an organization.
         """
 
-        return PurchaseOrder.objects(
-            organization=organization,
-        ).order_by(
-            "-created_at"
+        return (
+            PurchaseOrderRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -98,14 +145,21 @@ class PurchaseOrderRepository:
         supplier,
     ):
         """
-        List purchase orders for a supplier.
+        List Purchase Orders for a supplier.
         """
 
-        return PurchaseOrder.objects(
-            organization=organization,
-            supplier=supplier,
-        ).order_by(
-            "-created_at"
+        return (
+            PurchaseOrderRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                supplier=supplier,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -115,14 +169,21 @@ class PurchaseOrderRepository:
         status,
     ):
         """
-        List purchase orders by status.
+        List Purchase Orders by status.
         """
 
-        return PurchaseOrder.objects(
-            organization=organization,
-            status=status,
-        ).order_by(
-            "-created_at"
+        return (
+            PurchaseOrderRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                status=status,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -140,14 +201,13 @@ class PurchaseOrderRepository:
         notes=None,
     ):
         """
-        Update editable purchase order fields.
-
-        Business rules about whether the PO can
-        be edited belong in the service layer.
+        Update editable Purchase Order fields.
         """
 
         if supplier is not None:
-            purchase_order.supplier = supplier
+            purchase_order.supplier = (
+                supplier
+            )
 
         if order_date is not None:
             purchase_order.order_date = (
@@ -155,15 +215,18 @@ class PurchaseOrderRepository:
             )
 
         if expected_delivery_date is not None:
-            purchase_order.expected_delivery_date = (
-                expected_delivery_date
-            )
+            (
+                purchase_order
+                .expected_delivery_date
+            ) = expected_delivery_date
 
         if items is not None:
             purchase_order.items = items
 
         if subtotal is not None:
-            purchase_order.subtotal = subtotal
+            purchase_order.subtotal = (
+                subtotal
+            )
 
         if tax_amount is not None:
             purchase_order.tax_amount = (
@@ -171,9 +234,10 @@ class PurchaseOrderRepository:
             )
 
         if discount_amount is not None:
-            purchase_order.discount_amount = (
-                discount_amount
-            )
+            (
+                purchase_order
+                .discount_amount
+            ) = discount_amount
 
         if total_amount is not None:
             purchase_order.total_amount = (
@@ -200,7 +264,7 @@ class PurchaseOrderRepository:
         cancelled_at=None,
     ):
         """
-        Persist a purchase order status change.
+        Persist a Purchase Order status change.
         """
 
         purchase_order.status = status
@@ -232,9 +296,6 @@ class PurchaseOrderRepository:
     ):
         """
         Persist received quantities and receipt status.
-
-        This will be used by the Goods Receipt
-        workflow later.
         """
 
         purchase_order.items = items

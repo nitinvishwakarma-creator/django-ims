@@ -1091,6 +1091,12 @@ class Command(
                     {},
                 )
             )
+            vendor_bill_endpoints = (
+                manifest_endpoints.get(
+                    "vendor_bills",
+                    {},
+                )
+            )
             warehouse_endpoints = (
                 manifest_endpoints.get(
                     "warehouses",
@@ -1728,6 +1734,107 @@ class Command(
                         "methods",
                         [],
                     )
+                ),
+            )
+            check(
+                "Discovery exposes Vendor Bill endpoints",
+                bool(
+                    vendor_bill_endpoints
+                ),
+            )
+
+            check(
+                "Discovery documents Vendor Bill lifecycle",
+                all(
+                    endpoint_name
+                    in vendor_bill_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "post",
+                        "cancel",
+                    )
+                ),
+            )
+
+            check(
+                "Discovery exposes payable and payment endpoints",
+                all(
+                    endpoint_name
+                    in vendor_bill_endpoints
+                    for endpoint_name
+                    in (
+                        "record_payment",
+                        "bank_accounts",
+                        "accounts_payable",
+                    )
+                ),
+            )
+            check(
+                "Vendor Bill collection route available",
+                route_exists(
+                    "/api/v1/vendor-bills/",
+                ),
+            )
+
+            check(
+                "Vendor Bill detail route available",
+                route_exists(
+                    (
+                        "/api/v1/vendor-bills/"
+                        "audit-vendor-bill-id/"
+                    ),
+                ),
+            )
+
+            check(
+                "Vendor Bill posting route available",
+                route_exists(
+                    (
+                        "/api/v1/vendor-bills/"
+                        "audit-vendor-bill-id/"
+                        "post/"
+                    ),
+                ),
+            )
+
+            check(
+                "Vendor Bill cancellation route available",
+                route_exists(
+                    (
+                        "/api/v1/vendor-bills/"
+                        "audit-vendor-bill-id/"
+                        "cancel/"
+                    ),
+                ),
+            )
+
+            check(
+                "Vendor Bill payment route available",
+                route_exists(
+                    (
+                        "/api/v1/vendor-bills/"
+                        "audit-vendor-bill-id/"
+                        "payments/"
+                    ),
+                ),
+            )
+
+            check(
+                "Vendor Bill bank-account route available",
+                route_exists(
+                    (
+                        "/api/v1/vendor-bills/"
+                        "bank-accounts/"
+                    ),
+                ),
+            )
+
+            check(
+                "Accounts payable route available",
+                route_exists(
+                    "/api/v1/accounts-payable/",
                 ),
             )
             check(

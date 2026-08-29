@@ -564,3 +564,557 @@ class GoodsReceiptAPISerializer:
                 or []
             )
         ]
+
+class PurchasingBankAccountAPISerializer:
+
+    @staticmethod
+    def serialize_summary(
+        bank_account,
+    ):
+        if not bank_account:
+            return None
+
+        account_number = (
+            bank_account.account_number
+            or
+            ""
+        )
+
+        masked_account_number = (
+            (
+                "••••"
+                +
+                account_number[-4:]
+            )
+            if account_number
+            else None
+        )
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    bank_account.id
+                )
+            ),
+            "account_name":
+                bank_account.account_name,
+            "account_type":
+                bank_account.account_type,
+            "bank_name":
+                (
+                    bank_account.bank_name
+                    or
+                    None
+                ),
+            "masked_account_number":
+                masked_account_number,
+            "currency":
+                bank_account.currency,
+            "is_active":
+                bool(
+                    bank_account.is_active
+                ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        bank_accounts,
+    ):
+        return [
+            (
+                PurchasingBankAccountAPISerializer
+                .serialize_summary(
+                    bank_account
+                )
+            )
+            for bank_account
+            in bank_accounts
+        ]
+
+
+class VendorBillAPISerializer:
+
+    @staticmethod
+    def _serialize_purchase_order(
+        purchase_order,
+    ):
+        if not purchase_order:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    purchase_order.id
+                )
+            ),
+            "po_number":
+                purchase_order.po_number,
+            "status":
+                purchase_order.status,
+        }
+
+    @staticmethod
+    def _serialize_product(
+        product,
+    ):
+        if not product:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    product.id
+                )
+            ),
+            "sku":
+                product.sku,
+            "name":
+                product.name,
+            "unit":
+                product.unit,
+        }
+
+    @staticmethod
+    def _serialize_user(
+        user,
+    ):
+        if not user:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    user.id
+                )
+            ),
+            "email":
+                user.email,
+            "first_name":
+                user.first_name,
+            "last_name":
+                user.last_name,
+        }
+
+    @staticmethod
+    def serialize_item(
+        item,
+    ):
+        if not item:
+            return None
+
+        return {
+            "product": (
+                VendorBillAPISerializer
+                ._serialize_product(
+                    item.product
+                )
+            ),
+            "quantity":
+                str(
+                    item.quantity
+                ),
+            "unit_price":
+                str(
+                    item.unit_price
+                ),
+            "tax_rate":
+                str(
+                    item.tax_rate
+                ),
+            "discount":
+                str(
+                    item.discount
+                ),
+            "line_subtotal":
+                str(
+                    item.line_subtotal
+                ),
+            "line_tax":
+                str(
+                    item.line_tax
+                ),
+            "line_total":
+                str(
+                    item.line_total
+                ),
+        }
+
+    @staticmethod
+    def serialize_summary(
+        bill,
+    ):
+        if not bill:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    bill.id
+                )
+            ),
+            "bill_number":
+                bill.bill_number,
+            "supplier_invoice_number": (
+                bill.supplier_invoice_number
+                or
+                None
+            ),
+            "purchase_order": (
+                VendorBillAPISerializer
+                ._serialize_purchase_order(
+                    bill.purchase_order
+                )
+            ),
+            "supplier": (
+                SupplierAPISerializer
+                .serialize_summary(
+                    bill.supplier
+                )
+            ),
+            "status":
+                bill.status,
+            "bill_date": (
+                APISerializationService
+                .serialize_datetime(
+                    bill.bill_date
+                )
+            ),
+            "due_date": (
+                APISerializationService
+                .serialize_datetime(
+                    bill.due_date
+                )
+            ),
+            "subtotal":
+                str(
+                    bill.subtotal
+                ),
+            "tax_amount":
+                str(
+                    bill.tax_amount
+                ),
+            "discount_amount":
+                str(
+                    bill.discount_amount
+                ),
+            "total_amount":
+                str(
+                    bill.total_amount
+                ),
+            "amount_paid":
+                str(
+                    bill.amount_paid
+                ),
+            "balance_due":
+                str(
+                    bill.balance_due
+                ),
+            "item_count":
+                len(
+                    bill.items
+                    or
+                    []
+                ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    bill.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    bill.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        bill,
+    ):
+        if not bill:
+            return None
+
+        summary = (
+            VendorBillAPISerializer
+            .serialize_summary(
+                bill
+            )
+        )
+
+        return {
+            **summary,
+            "items": [
+                (
+                    VendorBillAPISerializer
+                    .serialize_item(
+                        item
+                    )
+                )
+                for item
+                in (
+                    bill.items
+                    or
+                    []
+                )
+            ],
+            "supplier_snapshot": {
+                "name":
+                    bill.supplier_name,
+                "address":
+                    (
+                        bill.supplier_address
+                        or
+                        None
+                    ),
+                "city":
+                    (
+                        bill.supplier_city
+                        or
+                        None
+                    ),
+                "state":
+                    (
+                        bill.supplier_state
+                        or
+                        None
+                    ),
+                "country":
+                    (
+                        bill.supplier_country
+                        or
+                        None
+                    ),
+                "pincode":
+                    (
+                        bill.supplier_pincode
+                        or
+                        None
+                    ),
+                "gstin":
+                    (
+                        bill.supplier_gstin
+                        or
+                        None
+                    ),
+            },
+            "notes":
+                (
+                    bill.notes
+                    or
+                    None
+                ),
+            "created_by": (
+                VendorBillAPISerializer
+                ._serialize_user(
+                    bill.created_by
+                )
+            ),
+            "posted_at": (
+                APISerializationService
+                .serialize_datetime(
+                    bill.posted_at
+                )
+            ),
+            "paid_at": (
+                APISerializationService
+                .serialize_datetime(
+                    bill.paid_at
+                )
+            ),
+            "cancelled_at": (
+                APISerializationService
+                .serialize_datetime(
+                    bill.cancelled_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        bills,
+    ):
+        return [
+            (
+                VendorBillAPISerializer
+                .serialize_summary(
+                    bill
+                )
+            )
+            for bill
+            in bills
+        ]
+
+
+class SupplierPaymentAPISerializer:
+
+    @staticmethod
+    def serialize_summary(
+        payment,
+    ):
+        if not payment:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    payment.id
+                )
+            ),
+            "payment_number":
+                payment.payment_number,
+            "supplier": (
+                SupplierAPISerializer
+                .serialize_summary(
+                    payment.supplier
+                )
+            ),
+            "payment_date": (
+                APISerializationService
+                .serialize_datetime(
+                    payment.payment_date
+                )
+            ),
+            "amount":
+                str(
+                    payment.amount
+                ),
+            "payment_method":
+                payment.payment_method,
+            "bank_account": (
+                PurchasingBankAccountAPISerializer
+                .serialize_summary(
+                    payment.bank_account
+                )
+            ),
+            "reference_number":
+                (
+                    payment.reference_number
+                    or
+                    None
+                ),
+            "allocation_count":
+                len(
+                    payment.allocations
+                    or
+                    []
+                ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    payment.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    payment.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        payment,
+    ):
+        if not payment:
+            return None
+
+        summary = (
+            SupplierPaymentAPISerializer
+            .serialize_summary(
+                payment
+            )
+        )
+
+        return {
+            **summary,
+            "allocations": [
+                {
+                    "vendor_bill": {
+                        "id": (
+                            APISerializationService
+                            .serialize_identifier(
+                                allocation
+                                .vendor_bill
+                                .id
+                            )
+                        ),
+                        "bill_number": (
+                            allocation
+                            .vendor_bill
+                            .bill_number
+                        ),
+                        "status": (
+                            allocation
+                            .vendor_bill
+                            .status
+                        ),
+                        "bill_date": (
+                            APISerializationService
+                            .serialize_datetime(
+                                allocation
+                                .vendor_bill
+                                .bill_date
+                            )
+                        ),
+                        "total_amount":
+                            str(
+                                allocation
+                                .vendor_bill
+                                .total_amount
+                            ),
+                        "balance_due":
+                            str(
+                                allocation
+                                .vendor_bill
+                                .balance_due
+                            ),
+                    },
+                    "amount":
+                        str(
+                            allocation.amount
+                        ),
+                }
+                for allocation
+                in (
+                    payment.allocations
+                    or
+                    []
+                )
+            ],
+            "notes":
+                (
+                    payment.notes
+                    or
+                    None
+                ),
+            "created_by": (
+                VendorBillAPISerializer
+                ._serialize_user(
+                    payment.created_by
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        payments,
+    ):
+        return [
+            (
+                SupplierPaymentAPISerializer
+                .serialize_summary(
+                    payment
+                )
+            )
+            for payment
+            in payments
+        ]

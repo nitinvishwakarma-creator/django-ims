@@ -39,6 +39,8 @@ from apps.organizations.api_context_service import (
 from apps.purchasing.api.v1.serializers import (
     PurchaseOrderAPISerializer,
     SupplierAPISerializer,
+    SupplierPaymentAPISerializer,
+    VendorBillAPISerializer,
 )
 from apps.purchasing.repositories.supplier_repository import (
     SupplierRepository,
@@ -49,6 +51,9 @@ from apps.products.repositories.product_repository import (
 from apps.purchasing.repositories.purchase_order_repository import (
     PurchaseOrderRepository,
 )
+from apps.purchasing.repositories.vendor_bill_repository import (
+    VendorBillRepository,
+)
 from apps.purchasing.services.supplier_api_service import (
     SupplierAPIService,
     SupplierAPIStateError,
@@ -58,6 +63,11 @@ from apps.purchasing.services.purchase_order_api_service import (
     PurchaseOrderAPIService,
     PurchaseOrderAPIStateError,
     PurchaseOrderAPIValidationError,
+)
+from apps.purchasing.services.vendor_bill_api_service import (
+    VendorBillAPIService,
+    VendorBillAPIStateError,
+    VendorBillAPIValidationError,
 )
 
 class SupplierAPIV1RegressionTestCase(
@@ -2288,6 +2298,631 @@ class PurchaseOrderAPIV1RegressionTestCase(
             self.detail_url(),
             data=json.dumps({}),
             content_type="application/json",
+        )
+
+        self.assert_error_contract(
+            response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+class VendorBillAPIV1RegressionTestCase(
+    SimpleTestCase
+):
+
+    VENDOR_BILLS_URL = (
+        "/api/v1/vendor-bills/"
+    )
+
+    ACCOUNTS_PAYABLE_URL = (
+        "/api/v1/accounts-payable/"
+    )
+
+    def setUp(self):
+        now = datetime.utcnow()
+
+        self.organization = SimpleNamespace(
+            id=ObjectId(),
+            name="Bill Regression Organization",
+            email="organization@example.com",
+            phone="9999999999",
+            address="Regression Address",
+            country="India",
+            currency="INR",
+            timezone="Asia/Kolkata",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.user = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            email="admin@example.com",
+            first_name="System",
+            last_name="Administrator",
+            is_active=True,
+            is_authenticated=True,
+            is_anonymous=False,
+        )
+
+        self.supplier = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            code="SUP-001",
+            name="Regression Supplier",
+            email="supplier@example.com",
+            phone="9999999998",
+            gstin="27ABCDE1234F1Z5",
+            address="Supplier Address",
+            city="Pune",
+            state="Maharashtra",
+            country="India",
+            pincode="411001",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.product = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            sku="ITEM-001",
+            name="Regression Item",
+            unit="piece",
+            is_active=True,
+        )
+
+        self.purchase_order = (
+            SimpleNamespace(
+                id=ObjectId(),
+                organization=self.organization,
+                po_number="PO-REG-001",
+                supplier=self.supplier,
+                status="RECEIVED",
+            )
+        )
+
+        self.bill_item = SimpleNamespace(
+            product=self.product,
+            quantity=Decimal("2.00"),
+            unit_price=Decimal("100.00"),
+            tax_rate=Decimal("18.00"),
+            discount=Decimal("0.00"),
+            line_subtotal=Decimal("200.00"),
+            line_tax=Decimal("36.00"),
+            line_total=Decimal("236.00"),
+        )
+
+        self.vendor_bill = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            bill_number="BILL-REG-001",
+            supplier_invoice_number="SI-001",
+            purchase_order=self.purchase_order,
+            supplier=self.supplier,
+            status="DRAFT",
+            bill_date=now,
+            due_date=now,
+            items=[
+                self.bill_item,
+            ],
+            subtotal=Decimal("200.00"),
+            tax_amount=Decimal("36.00"),
+            discount_amount=Decimal("0.00"),
+            total_amount=Decimal("236.00"),
+            amount_paid=Decimal("0.00"),
+            balance_due=Decimal("236.00"),
+            supplier_name=self.supplier.name,
+            supplier_address=self.supplier.address,
+            supplier_city=self.supplier.city,
+            supplier_state=self.supplier.state,
+            supplier_country=self.supplier.country,
+            supplier_pincode=self.supplier.pincode,
+            supplier_gstin=self.supplier.gstin,
+            notes="Regression bill.",
+            created_by=self.user,
+            posted_at=None,
+            paid_at=None,
+            cancelled_at=None,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.organization_context = {
+            "user":
+                self.user,
+            "organization":
+                self.organization,
+        }
+
+        self.patchers = [
+            patch.object(
+                ApplicationLoggingService,
+                "log",
+                return_value=None,
+            ),
+            patch.object(
+                MongoDBErrorLoggingService,
+                "log_exception",
+                return_value=None,
+            ),
+            patch.object(
+                APIOrganizationContextService,
+                "resolve",
+                return_value=(
+                    self.organization_context
+                ),
+            ),
+            patch.object(
+                AuthorizationService,
+                "has_permission",
+                return_value=True,
+            ),
+            patch.object(
+                APIRateLimitService,
+                "check",
+                return_value={
+                    "allowed": True,
+                },
+            ),
+            patch.object(
+                APIRateLimitService,
+                "add_headers",
+                side_effect=(
+                    lambda response, result:
+                    response
+                ),
+            ),
+        ]
+
+        for patcher in self.patchers:
+            patcher.start()
+
+        self.client = Client(
+            raise_request_exception=False
+        )
+
+    def tearDown(self):
+        for patcher in reversed(
+            self.patchers
+        ):
+            patcher.stop()
+
+    def detail_url(self):
+        return (
+            f"{self.VENDOR_BILLS_URL}"
+            f"{self.vendor_bill.id}/"
+        )
+
+    def post_url(self):
+        return (
+            f"{self.detail_url()}post/"
+        )
+
+    def cancel_url(self):
+        return (
+            f"{self.detail_url()}cancel/"
+        )
+
+    def payment_url(self):
+        return (
+            f"{self.detail_url()}payments/"
+        )
+
+    def assert_success_contract(
+        self,
+        response,
+        expected_status=200,
+    ):
+        body = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+        )
+
+        self.assertTrue(
+            body["success"]
+        )
+
+        self.assertIn(
+            "data",
+            body,
+        )
+
+        self.assertTrue(
+            body.get(
+                "request_id"
+            )
+        )
+
+        return body
+
+    def assert_error_contract(
+        self,
+        response,
+        expected_status,
+        expected_code,
+    ):
+        body = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+        )
+
+        self.assertFalse(
+            body["success"]
+        )
+
+        self.assertEqual(
+            body["error"]["code"],
+            expected_code,
+        )
+
+        return body
+
+    def test_anonymous_vendor_bill_list_is_rejected(
+        self,
+    ):
+        with patch.object(
+            APIOrganizationContextService,
+            "resolve",
+            side_effect=PermissionError(
+                "Not authenticated."
+            ),
+        ):
+            response = self.client.get(
+                self.VENDOR_BILLS_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            401,
+            "UNAUTHORIZED",
+        )
+
+    def test_vendor_bill_list_uses_query_pipeline(
+        self,
+    ):
+        pipeline_result = {
+            "items": [
+                self.vendor_bill,
+            ],
+            "pagination": {
+                "page": 1,
+                "page_size": 25,
+                "total_items": 1,
+                "total_pages": 1,
+                "has_next": False,
+                "has_previous": False,
+            },
+            "query": {
+                "search": None,
+                "filters": {},
+                "sort": [
+                    "-created_at",
+                    "id",
+                ],
+            },
+        }
+
+        with (
+            patch.object(
+                VendorBillRepository,
+                "queryset_for_organization",
+                return_value=object(),
+            ),
+            patch.object(
+                APIQueryPipelineService,
+                "execute",
+                return_value=pipeline_result,
+            ),
+        ):
+            response = self.client.get(
+                self.VENDOR_BILLS_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["vendor_bills"][
+                0
+            ]["bill_number"],
+            self.vendor_bill.bill_number,
+        )
+
+    def test_vendor_bill_detail(
+        self,
+    ):
+        with patch.object(
+            VendorBillAPIService,
+            "get_vendor_bill",
+            return_value=self.vendor_bill,
+        ):
+            response = self.client.get(
+                self.detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["vendor_bill"][
+                "id"
+            ],
+            str(
+                self.vendor_bill.id
+            ),
+        )
+
+    def test_create_vendor_bill(
+        self,
+    ):
+        with patch.object(
+            VendorBillAPIService,
+            "create_vendor_bill",
+            return_value=self.vendor_bill,
+        ) as create_mock:
+            response = self.client.post(
+                self.VENDOR_BILLS_URL,
+                data=json.dumps(
+                    {
+                        "purchase_order_id":
+                            str(
+                                self.purchase_order.id
+                            ),
+                        "bill_date":
+                            "2026-08-29",
+                        "due_date":
+                            "2026-09-28",
+                    }
+                ),
+                content_type="application/json",
+            )
+
+        self.assert_success_contract(
+            response,
+            201,
+        )
+
+        create_mock.assert_called_once()
+
+    def test_post_vendor_bill(
+        self,
+    ):
+        posted_bill = SimpleNamespace(
+            **{
+                **vars(
+                    self.vendor_bill
+                ),
+                "status":
+                    "POSTED",
+                "posted_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            VendorBillAPIService,
+            "post_vendor_bill",
+            return_value=posted_bill,
+        ):
+            response = self.client.post(
+                self.post_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["vendor_bill"][
+                "status"
+            ],
+            "POSTED",
+        )
+
+    def test_cancel_vendor_bill(
+        self,
+    ):
+        cancelled_bill = SimpleNamespace(
+            **{
+                **vars(
+                    self.vendor_bill
+                ),
+                "status":
+                    "CANCELLED",
+                "cancelled_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            VendorBillAPIService,
+            "cancel_vendor_bill",
+            return_value=cancelled_bill,
+        ):
+            response = self.client.post(
+                self.cancel_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"]["vendor_bill"][
+                "status"
+            ],
+            "CANCELLED",
+        )
+
+    def test_malformed_vendor_bill_id_is_validation_error(
+        self,
+    ):
+        response = self.client.get(
+            (
+                f"{self.VENDOR_BILLS_URL}"
+                "invalid-id/"
+            )
+        )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_missing_vendor_bill_returns_not_found(
+        self,
+    ):
+        with patch.object(
+            VendorBillRepository,
+            "get_by_id",
+            return_value=None,
+        ):
+            response = self.client.get(
+                (
+                    f"{self.VENDOR_BILLS_URL}"
+                    f"{ObjectId()}/"
+                )
+            )
+
+        self.assert_error_contract(
+            response,
+            404,
+            "NOT_FOUND",
+        )
+
+    def test_vendor_bill_list_without_permission_is_forbidden(
+        self,
+    ):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.get(
+                self.VENDOR_BILLS_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+    def test_vendor_bill_state_error_is_unprocessable(
+        self,
+    ):
+        with patch.object(
+            VendorBillAPIService,
+            "post_vendor_bill",
+            side_effect=(
+                VendorBillAPIStateError(
+                    message=(
+                        "Only DRAFT vendor "
+                        "bills can be posted."
+                    ),
+                    details={
+                        "vendor_bill": [
+                            (
+                                "Only DRAFT vendor "
+                                "bills can be posted."
+                            ),
+                        ],
+                    },
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.post_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            422,
+            "UNPROCESSABLE_ENTITY",
+        )
+
+    def test_accounts_payable_summary(
+        self,
+    ):
+        posted_bill = SimpleNamespace(
+            **{
+                **vars(
+                    self.vendor_bill
+                ),
+                "status":
+                    "POSTED",
+            }
+        )
+
+        with patch.object(
+            VendorBillAPIService,
+            "list_outstanding",
+            return_value=[
+                posted_bill,
+            ],
+        ):
+            response = self.client.get(
+                self.ACCOUNTS_PAYABLE_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "accounts_payable"
+            ]["bill_count"],
+            1,
+        )
+
+        self.assertEqual(
+            body["data"][
+                "accounts_payable"
+            ]["total_outstanding"],
+            "236.00",
+        )
+
+    def test_vendor_bill_serializer_has_safe_fields(
+        self,
+    ):
+        serialized = (
+            VendorBillAPISerializer
+            .serialize_detail(
+                self.vendor_bill
+            )
+        )
+
+        self.assertEqual(
+            serialized["bill_number"],
+            self.vendor_bill.bill_number,
+        )
+
+        self.assertNotIn(
+            "organization",
+            serialized,
+        )
+
+    def test_vendor_bill_collection_rejects_delete(
+        self,
+    ):
+        response = self.client.delete(
+            self.VENDOR_BILLS_URL
         )
 
         self.assert_error_contract(

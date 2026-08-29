@@ -1573,6 +1573,169 @@ class APIDiscoveryService:
                 "status": "available",
             },
         }
+
+    @staticmethod
+    def get_vendor_bill_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/vendor-bills/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "bills.read",
+                    "POST":
+                        "bills.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "supplier_id":
+                        "object_id",
+                    "purchase_order_id":
+                        "object_id",
+                    "status":
+                        "string",
+                },
+                "create_fields": [
+                    "purchase_order_id",
+                    (
+                        "supplier_invoice_"
+                        "number"
+                    ),
+                    "bill_date",
+                    "due_date",
+                    "notes",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/vendor-bills/"
+                    "{bill_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bills.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "post": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/vendor-bills/"
+                    "{bill_id}/post/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bills.post",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "status":
+                    "available",
+            },
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/vendor-bills/"
+                    "{bill_id}/cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bills.cancel",
+                "blocked_statuses": [
+                    "PARTIALLY_PAID",
+                    "PAID",
+                    "CANCELLED",
+                ],
+                "status":
+                    "available",
+            },
+            "record_payment": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/vendor-bills/"
+                    "{bill_id}/payments/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bills.record_payment",
+                "allowed_statuses": [
+                    "POSTED",
+                    "PARTIALLY_PAID",
+                ],
+                "status":
+                    "available",
+            },
+            "bank_accounts": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/vendor-bills/"
+                    "bank-accounts/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bills.record_payment",
+                "status":
+                    "available",
+            },
+            "accounts_payable": {
+                "methods": [
+                    "GET",
+                ],
+                "path":
+                    "/api/v1/accounts-payable/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bills.read",
+                "status":
+                    "available",
+            },
+        }
     @staticmethod
     def get_warehouse_endpoints():
         return {
@@ -2004,6 +2167,10 @@ class APIDiscoveryService:
                 "goods_receipts": (
                     APIDiscoveryService
                     .get_goods_receipt_endpoints()
+                ),
+                "vendor_bills": (
+                    APIDiscoveryService
+                    .get_vendor_bill_endpoints()
                 ),
                 "warehouses":
                     (

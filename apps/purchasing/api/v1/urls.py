@@ -7,6 +7,8 @@ from apps.purchasing.api.v1 import (
 )
 from apps.purchasing.api.v1 import (
     goods_receipt_views,
+    vendor_bill_views,
+    views,
 )
 
 app_name = "purchasing_api_v1"
@@ -89,5 +91,57 @@ urlpatterns = [
         goods_receipt_views
         .goods_receipt_detail_api,
         name="goods_receipt_detail",
+    ),
+    path(
+        "vendor-bills/",
+        vendor_bill_views
+        .vendor_bill_collection_api,
+        name="vendor_bill_collection",
+    ),
+
+    path(
+        "vendor-bills/bank-accounts/",
+        vendor_bill_views
+        .vendor_bill_bank_account_list_api,
+        name="vendor_bill_bank_accounts",
+    ),
+
+    path(
+        "vendor-bills/"
+        "<str:bill_id>/post/",
+        vendor_bill_views
+        .vendor_bill_post_api,
+        name="vendor_bill_post",
+    ),
+
+    path(
+        "vendor-bills/"
+        "<str:bill_id>/cancel/",
+        vendor_bill_views
+        .vendor_bill_cancel_api,
+        name="vendor_bill_cancel",
+    ),
+
+    path(
+        "vendor-bills/"
+        "<str:bill_id>/payments/",
+        vendor_bill_views
+        .vendor_bill_record_payment_api,
+        name="vendor_bill_record_payment",
+    ),
+
+    path(
+        "vendor-bills/"
+        "<str:bill_id>/",
+        vendor_bill_views
+        .vendor_bill_detail_api,
+        name="vendor_bill_detail",
+    ),
+
+    path(
+        "accounts-payable/",
+        vendor_bill_views
+        .accounts_payable_api,
+        name="accounts_payable",
     ),
 ]

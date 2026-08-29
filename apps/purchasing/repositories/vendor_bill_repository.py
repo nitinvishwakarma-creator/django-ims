@@ -6,7 +6,25 @@ from apps.purchasing.models import (
 
 
 class VendorBillRepository:
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        if not organization:
+            return (
+                VendorBill
+                .objects(
+                    id=None,
+                )
+            )
 
+        return (
+            VendorBill
+            .objects(
+                organization=organization,
+            )
+        )
     @staticmethod
     def create_vendor_bill(
         *,
@@ -72,10 +90,23 @@ class VendorBillRepository:
         organization,
         bill_id,
     ):
-        return VendorBill.objects(
-            organization=organization,
-            id=bill_id,
-        ).first()
+        try:
+            return (
+                VendorBillRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=bill_id,
+                )
+                .first()
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return None
 
     @staticmethod
     def get_by_bill_number(
@@ -124,10 +155,15 @@ class VendorBillRepository:
         *,
         organization,
     ):
-        return VendorBill.objects(
-            organization=organization,
-        ).order_by(
-            "-created_at"
+        return (
+            VendorBillRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod

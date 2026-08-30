@@ -3,6 +3,8 @@ from django.urls import (
 )
 
 from apps.sales.api.v1 import (
+    credit_note_views,
+    sales_return_views,
     views,
 )
 
@@ -157,5 +159,82 @@ urlpatterns = [
         name=(
             "accounts_receivable_aging"
         ),
+    ),
+    path(
+        "sales-returns/",
+        sales_return_views
+        .sales_return_collection_api,
+        name="sales_return_collection",
+    ),
+
+    path(
+        (
+            "sales-returns/"
+            "<str:sales_return_id>/"
+            "confirm/"
+        ),
+        sales_return_views
+        .sales_return_confirm_api,
+        name="sales_return_confirm",
+    ),
+
+    path(
+        (
+            "sales-returns/"
+            "<str:sales_return_id>/"
+            "cancel/"
+        ),
+        sales_return_views
+        .sales_return_cancel_api,
+        name="sales_return_cancel",
+    ),
+
+    path(
+        (
+            "sales-returns/"
+            "<str:sales_return_id>/"
+        ),
+        sales_return_views
+        .sales_return_detail_api,
+        name="sales_return_detail",
+    ),
+
+    path(
+        "credit-notes/",
+        credit_note_views
+        .credit_note_collection_api,
+        name="credit_note_collection",
+    ),
+
+    path(
+        (
+            "credit-notes/"
+            "<str:credit_note_id>/"
+            "issue/"
+        ),
+        credit_note_views
+        .credit_note_issue_api,
+        name="credit_note_issue",
+    ),
+
+    path(
+        (
+            "credit-notes/"
+            "<str:credit_note_id>/"
+            "cancel/"
+        ),
+        credit_note_views
+        .credit_note_cancel_api,
+        name="credit_note_cancel",
+    ),
+
+    path(
+        (
+            "credit-notes/"
+            "<str:credit_note_id>/"
+        ),
+        credit_note_views
+        .credit_note_detail_api,
+        name="credit_note_detail",
     ),
 ]

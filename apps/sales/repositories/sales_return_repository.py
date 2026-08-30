@@ -1,9 +1,22 @@
+from mongoengine.errors import (
+    ValidationError,
+)
+
 from apps.sales.models import (
     SalesReturn,
 )
 
 
 class SalesReturnRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return SalesReturn.objects(
+            organization=organization,
+        )
 
     @staticmethod
     def create_return(
@@ -54,10 +67,24 @@ class SalesReturnRepository:
         organization,
         return_id,
     ):
-        return SalesReturn.objects(
-            organization=organization,
-            id=return_id,
-        ).first()
+        try:
+            return (
+                SalesReturnRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=return_id,
+                )
+                .first()
+            )
+
+        except (
+            ValidationError,
+            TypeError,
+            ValueError,
+        ):
+            return None
 
     @staticmethod
     def get_by_return_number(
@@ -65,21 +92,32 @@ class SalesReturnRepository:
         organization,
         return_number,
     ):
-        return SalesReturn.objects(
-            organization=organization,
-            return_number=return_number,
-        ).first()
+        return (
+            SalesReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                return_number=return_number,
+            )
+            .first()
+        )
 
     @staticmethod
     def list_by_organization(
         *,
         organization,
     ):
-        return SalesReturn.objects(
-            organization=organization,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            SalesReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -88,12 +126,19 @@ class SalesReturnRepository:
         organization,
         invoice,
     ):
-        return SalesReturn.objects(
-            organization=organization,
-            invoice=invoice,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            SalesReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                invoice=invoice,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -102,13 +147,20 @@ class SalesReturnRepository:
         organization,
         invoice,
     ):
-        return SalesReturn.objects(
-            organization=organization,
-            invoice=invoice,
-            status="CONFIRMED",
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            SalesReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                invoice=invoice,
+                status="CONFIRMED",
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -117,12 +169,19 @@ class SalesReturnRepository:
         organization,
         sales_order,
     ):
-        return SalesReturn.objects(
-            organization=organization,
-            sales_order=sales_order,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            SalesReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                sales_order=sales_order,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -131,12 +190,19 @@ class SalesReturnRepository:
         organization,
         customer,
     ):
-        return SalesReturn.objects(
-            organization=organization,
-            customer=customer,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            SalesReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                customer=customer,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -145,12 +211,19 @@ class SalesReturnRepository:
         organization,
         status,
     ):
-        return SalesReturn.objects(
-            organization=organization,
-            status=status,
-        ).order_by(
-            "-return_date",
-            "-created_at",
+        return (
+            SalesReturnRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                status=status,
+            )
+            .order_by(
+                "-return_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod

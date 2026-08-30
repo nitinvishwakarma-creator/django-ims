@@ -38,6 +38,8 @@ from apps.sales.api.v1.serializers import (
     CustomerPaymentAPISerializer,
     InvoiceAPISerializer,
     SalesOrderAPISerializer,
+    CreditNoteAPISerializer,
+    SalesReturnAPISerializer,
 )
 from apps.finance.repositories.bank_account_repository import (
     BankAccountRepository,
@@ -69,6 +71,12 @@ from apps.sales.repositories.customer_repository import (
 from apps.sales.repositories.sales_order_repository import (
     SalesOrderRepository,
 )
+from apps.sales.repositories.credit_note_repository import (
+    CreditNoteRepository,
+)
+from apps.sales.repositories.sales_return_repository import (
+    SalesReturnRepository,
+)
 from apps.sales.services.customer_api_service import (
     CustomerAPIService,
     CustomerAPIStateError,
@@ -78,6 +86,16 @@ from apps.sales.services.sales_order_api_service import (
     SalesOrderAPIService,
     SalesOrderAPIStateError,
     SalesOrderAPIValidationError,
+)
+from apps.sales.services.credit_note_api_service import (
+    CreditNoteAPIService,
+    CreditNoteAPIStateError,
+    CreditNoteAPIValidationError,
+)
+from apps.sales.services.sales_return_api_service import (
+    SalesReturnAPIService,
+    SalesReturnAPIStateError,
+    SalesReturnAPIValidationError,
 )
 from apps.sales.services.sales_order_service import (
     SalesOrderService,
@@ -3997,6 +4015,900 @@ class InvoiceAPIV1RegressionTestCase(
 
         self.assert_error_contract(
             response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+class SalesReturnAndCreditNoteAPIV1RegressionTestCase(
+    SimpleTestCase
+):
+
+    SALES_RETURNS_URL = (
+        "/api/v1/sales-returns/"
+    )
+
+    CREDIT_NOTES_URL = (
+        "/api/v1/credit-notes/"
+    )
+
+    def setUp(self):
+        now = datetime.utcnow()
+
+        self.organization = SimpleNamespace(
+            id=ObjectId(),
+            name="Sales Return Organization",
+            email="organization@example.com",
+            phone="9999999999",
+            address="Regression Address",
+            country="India",
+            currency="INR",
+            timezone="Asia/Kolkata",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.user = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            email="admin@example.com",
+            first_name="System",
+            last_name="Administrator",
+            is_active=True,
+            is_authenticated=True,
+            is_anonymous=False,
+        )
+
+        self.customer = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            code="CUS-RETURN-001",
+            name="Return Customer",
+            email="customer@example.com",
+            phone="9999999998",
+            gstin="27ABCDE1234F1Z5",
+            address="Customer Address",
+            city="Mumbai",
+            state="Maharashtra",
+            country="India",
+            pincode="400001",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.product = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            sku="RETURN-001",
+            name="Return Product",
+            unit="piece",
+            is_active=True,
+        )
+
+        self.warehouse = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            code="WH-RETURN-001",
+            name="Return Warehouse",
+            address="Warehouse Address",
+            city="Pune",
+            state="Maharashtra",
+            country="India",
+            pincode="411001",
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.sales_order = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            so_number="SO-RETURN-001",
+            customer=self.customer,
+            warehouse=self.warehouse,
+            status="FULFILLED",
+        )
+
+        self.invoice = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            invoice_number="INV-RETURN-001",
+            sales_order=self.sales_order,
+            customer=self.customer,
+            status="ISSUED",
+            total_amount=Decimal("118.00"),
+            amount_paid=Decimal("0.00"),
+            balance_due=Decimal("118.00"),
+        )
+
+        self.return_item = SimpleNamespace(
+            product=self.product,
+            quantity=Decimal("1.00"),
+            unit_price=Decimal("100.00"),
+            tax_rate=Decimal("18.00"),
+            discount=Decimal("0.00"),
+            line_subtotal=Decimal("100.00"),
+            line_tax=Decimal("18.00"),
+            line_total=Decimal("118.00"),
+            reason="Damaged item.",
+        )
+
+        self.sales_return = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            return_number="SR-RETURN-001",
+            sales_order=self.sales_order,
+            invoice=self.invoice,
+            customer=self.customer,
+            warehouse=self.warehouse,
+            status="DRAFT",
+            return_date=now,
+            items=[
+                self.return_item,
+            ],
+            subtotal=Decimal("100.00"),
+            tax_amount=Decimal("18.00"),
+            discount_amount=Decimal("0.00"),
+            total_amount=Decimal("118.00"),
+            reason="Damaged delivery.",
+            notes="Regression sales return.",
+            created_by=self.user,
+            confirmed_at=None,
+            cancelled_at=None,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.credit_note_item = SimpleNamespace(
+            product=self.product,
+            quantity=Decimal("1.00"),
+            unit_price=Decimal("100.00"),
+            tax_rate=Decimal("18.00"),
+            discount=Decimal("0.00"),
+            line_subtotal=Decimal("100.00"),
+            line_tax=Decimal("18.00"),
+            line_total=Decimal("118.00"),
+        )
+
+        self.credit_note = SimpleNamespace(
+            id=ObjectId(),
+            organization=self.organization,
+            credit_note_number="CN-RETURN-001",
+            invoice=self.invoice,
+            sales_return=self.sales_return,
+            customer=self.customer,
+            status="DRAFT",
+            credit_note_date=now,
+            items=[
+                self.credit_note_item,
+            ],
+            subtotal=Decimal("100.00"),
+            tax_amount=Decimal("18.00"),
+            discount_amount=Decimal("0.00"),
+            total_amount=Decimal("118.00"),
+            applied_amount=Decimal("0.00"),
+            remaining_credit=Decimal("118.00"),
+            reason="Damaged delivery.",
+            notes="Regression credit note.",
+            created_by=self.user,
+            issued_at=None,
+            cancelled_at=None,
+            created_at=now,
+            updated_at=now,
+        )
+
+        self.organization_context = {
+            "user":
+                self.user,
+            "organization":
+                self.organization,
+        }
+
+        self.patchers = [
+            patch.object(
+                ApplicationLoggingService,
+                "log",
+                return_value=None,
+            ),
+            patch.object(
+                MongoDBErrorLoggingService,
+                "log_exception",
+                return_value=None,
+            ),
+            patch.object(
+                APIOrganizationContextService,
+                "resolve",
+                return_value=(
+                    self.organization_context
+                ),
+            ),
+            patch.object(
+                AuthorizationService,
+                "has_permission",
+                return_value=True,
+            ),
+            patch.object(
+                APIRateLimitService,
+                "check",
+                return_value={
+                    "allowed": True,
+                },
+            ),
+            patch.object(
+                APIRateLimitService,
+                "add_headers",
+                side_effect=(
+                    lambda response, result:
+                    response
+                ),
+            ),
+        ]
+
+        for patcher in self.patchers:
+            patcher.start()
+
+        self.client = Client(
+            raise_request_exception=False
+        )
+
+    def tearDown(self):
+        for patcher in reversed(
+            self.patchers
+        ):
+            patcher.stop()
+
+    def sales_return_detail_url(self):
+        return (
+            f"{self.SALES_RETURNS_URL}"
+            f"{self.sales_return.id}/"
+        )
+
+    def sales_return_confirm_url(self):
+        return (
+            f"{self.SALES_RETURNS_URL}"
+            f"{self.sales_return.id}/"
+            "confirm/"
+        )
+
+    def sales_return_cancel_url(self):
+        return (
+            f"{self.SALES_RETURNS_URL}"
+            f"{self.sales_return.id}/"
+            "cancel/"
+        )
+
+    def credit_note_detail_url(self):
+        return (
+            f"{self.CREDIT_NOTES_URL}"
+            f"{self.credit_note.id}/"
+        )
+
+    def credit_note_issue_url(self):
+        return (
+            f"{self.CREDIT_NOTES_URL}"
+            f"{self.credit_note.id}/"
+            "issue/"
+        )
+
+    def credit_note_cancel_url(self):
+        return (
+            f"{self.CREDIT_NOTES_URL}"
+            f"{self.credit_note.id}/"
+            "cancel/"
+        )
+
+    def assert_success_contract(
+        self,
+        response,
+        expected_status=200,
+    ):
+        body = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+        )
+
+        self.assertTrue(
+            body["success"]
+        )
+
+        self.assertIn(
+            "data",
+            body,
+        )
+
+        self.assertTrue(
+            body.get(
+                "request_id"
+            )
+        )
+
+        self.assertEqual(
+            response.headers.get(
+                "X-Request-ID"
+            ),
+            body["request_id"],
+        )
+
+        return body
+
+    def assert_error_contract(
+        self,
+        response,
+        expected_status,
+        expected_code,
+    ):
+        body = response.json()
+
+        self.assertEqual(
+            response.status_code,
+            expected_status,
+        )
+
+        self.assertFalse(
+            body["success"]
+        )
+
+        self.assertEqual(
+            body["error"]["code"],
+            expected_code,
+        )
+
+        self.assertTrue(
+            body.get(
+                "request_id"
+            )
+        )
+
+        return body
+
+    @staticmethod
+    def pipeline_result(
+        items,
+        *,
+        sort_field,
+    ):
+        return {
+            "items":
+                items,
+            "pagination": {
+                "page": 1,
+                "page_size": 25,
+                "total_items":
+                    len(
+                        items
+                    ),
+                "total_pages": 1,
+                "has_next": False,
+                "has_previous": False,
+            },
+            "query": {
+                "search": None,
+                "filters": {},
+                "sort": [
+                    sort_field,
+                    "id",
+                ],
+            },
+        }
+
+    def test_anonymous_sales_return_list_is_rejected(
+        self,
+    ):
+        with patch.object(
+            APIOrganizationContextService,
+            "resolve",
+            side_effect=PermissionError(
+                "Not authenticated."
+            ),
+        ):
+            response = self.client.get(
+                self.SALES_RETURNS_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            401,
+            "UNAUTHORIZED",
+        )
+
+    def test_sales_return_list_uses_query_pipeline(
+        self,
+    ):
+        with patch.object(
+            APIQueryPipelineService,
+            "execute",
+            return_value=(
+                self.pipeline_result(
+                    [
+                        self.sales_return,
+                    ],
+                    sort_field=(
+                        "-return_date"
+                    ),
+                )
+            ),
+        ) as execute_mock:
+            response = self.client.get(
+                self.SALES_RETURNS_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            len(
+                body["data"][
+                    "sales_returns"
+                ]
+            ),
+            1,
+        )
+
+        execute_mock.assert_called_once()
+
+    def test_create_sales_return(
+        self,
+    ):
+        with patch.object(
+            SalesReturnAPIService,
+            "create_sales_return",
+            return_value=self.sales_return,
+        ):
+            response = self.client.post(
+                self.SALES_RETURNS_URL,
+                data=json.dumps({
+                    "invoice_id":
+                        str(
+                            self.invoice.id
+                        ),
+                    "items": [
+                        {
+                            "product_id":
+                                str(
+                                    self.product.id
+                                ),
+                            "quantity":
+                                "1.00",
+                        },
+                    ],
+                }),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response,
+            201,
+        )
+
+        self.assertEqual(
+            body["data"][
+                "sales_return"
+            ]["return_number"],
+            self.sales_return.return_number,
+        )
+
+    def test_sales_return_detail(
+        self,
+    ):
+        with patch.object(
+            SalesReturnRepository,
+            "get_by_id",
+            return_value=self.sales_return,
+        ):
+            response = self.client.get(
+                self.sales_return_detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "sales_return"
+            ]["id"],
+            str(
+                self.sales_return.id
+            ),
+        )
+
+    def test_malformed_sales_return_id_is_validation_error(
+        self,
+    ):
+        response = self.client.get(
+            (
+                f"{self.SALES_RETURNS_URL}"
+                "invalid-id/"
+            )
+        )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_missing_sales_return_returns_not_found(
+        self,
+    ):
+        with patch.object(
+            SalesReturnRepository,
+            "get_by_id",
+            return_value=None,
+        ):
+            response = self.client.get(
+                (
+                    f"{self.SALES_RETURNS_URL}"
+                    f"{ObjectId()}/"
+                )
+            )
+
+        self.assert_error_contract(
+            response,
+            404,
+            "NOT_FOUND",
+        )
+
+    def test_confirm_sales_return(
+        self,
+    ):
+        confirmed = SimpleNamespace(
+            **{
+                **vars(
+                    self.sales_return
+                ),
+                "status":
+                    "CONFIRMED",
+                "confirmed_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            SalesReturnAPIService,
+            "confirm_sales_return",
+            return_value=confirmed,
+        ):
+            response = self.client.post(
+                self.sales_return_confirm_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "sales_return"
+            ]["status"],
+            "CONFIRMED",
+        )
+
+    def test_sales_return_state_error_is_unprocessable(
+        self,
+    ):
+        with patch.object(
+            SalesReturnAPIService,
+            "confirm_sales_return",
+            side_effect=(
+                SalesReturnAPIStateError(
+                    message=(
+                        "Only draft sales returns "
+                        "can be confirmed."
+                    ),
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.sales_return_confirm_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            422,
+            "UNPROCESSABLE_ENTITY",
+        )
+
+    def test_cancel_sales_return(
+        self,
+    ):
+        cancelled = SimpleNamespace(
+            **{
+                **vars(
+                    self.sales_return
+                ),
+                "status":
+                    "CANCELLED",
+                "cancelled_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            SalesReturnAPIService,
+            "cancel_sales_return",
+            return_value=cancelled,
+        ):
+            response = self.client.post(
+                self.sales_return_cancel_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "sales_return"
+            ]["status"],
+            "CANCELLED",
+        )
+
+    def test_credit_note_list_uses_query_pipeline(
+        self,
+    ):
+        with patch.object(
+            APIQueryPipelineService,
+            "execute",
+            return_value=(
+                self.pipeline_result(
+                    [
+                        self.credit_note,
+                    ],
+                    sort_field=(
+                        "-credit_note_date"
+                    ),
+                )
+            ),
+        ):
+            response = self.client.get(
+                self.CREDIT_NOTES_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            len(
+                body["data"][
+                    "credit_notes"
+                ]
+            ),
+            1,
+        )
+
+    def test_create_credit_note(
+        self,
+    ):
+        with patch.object(
+            CreditNoteAPIService,
+            "create_credit_note",
+            return_value=self.credit_note,
+        ):
+            response = self.client.post(
+                self.CREDIT_NOTES_URL,
+                data=json.dumps({
+                    "sales_return_id":
+                        str(
+                            self.sales_return.id
+                        ),
+                }),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response,
+            201,
+        )
+
+        self.assertEqual(
+            body["data"][
+                "credit_note"
+            ]["credit_note_number"],
+            self.credit_note.credit_note_number,
+        )
+
+    def test_credit_note_detail(
+        self,
+    ):
+        with patch.object(
+            CreditNoteRepository,
+            "get_by_id",
+            return_value=self.credit_note,
+        ):
+            response = self.client.get(
+                self.credit_note_detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "credit_note"
+            ]["id"],
+            str(
+                self.credit_note.id
+            ),
+        )
+
+    def test_malformed_credit_note_id_is_validation_error(
+        self,
+    ):
+        response = self.client.get(
+            (
+                f"{self.CREDIT_NOTES_URL}"
+                "invalid-id/"
+            )
+        )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_missing_credit_note_returns_not_found(
+        self,
+    ):
+        with patch.object(
+            CreditNoteRepository,
+            "get_by_id",
+            return_value=None,
+        ):
+            response = self.client.get(
+                (
+                    f"{self.CREDIT_NOTES_URL}"
+                    f"{ObjectId()}/"
+                )
+            )
+
+        self.assert_error_contract(
+            response,
+            404,
+            "NOT_FOUND",
+        )
+
+    def test_issue_credit_note(
+        self,
+    ):
+        issued = SimpleNamespace(
+            **{
+                **vars(
+                    self.credit_note
+                ),
+                "status":
+                    "ISSUED",
+                "applied_amount":
+                    Decimal("118.00"),
+                "remaining_credit":
+                    Decimal("0.00"),
+                "issued_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            CreditNoteAPIService,
+            "issue_credit_note",
+            return_value=issued,
+        ):
+            response = self.client.post(
+                self.credit_note_issue_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "credit_note"
+            ]["status"],
+            "ISSUED",
+        )
+
+    def test_cancel_credit_note(
+        self,
+    ):
+        cancelled = SimpleNamespace(
+            **{
+                **vars(
+                    self.credit_note
+                ),
+                "status":
+                    "CANCELLED",
+                "cancelled_at":
+                    datetime.utcnow(),
+            }
+        )
+
+        with patch.object(
+            CreditNoteAPIService,
+            "cancel_credit_note",
+            return_value=cancelled,
+        ):
+            response = self.client.post(
+                self.credit_note_cancel_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "credit_note"
+            ]["status"],
+            "CANCELLED",
+        )
+
+    def test_credit_note_state_error_is_unprocessable(
+        self,
+    ):
+        with patch.object(
+            CreditNoteAPIService,
+            "issue_credit_note",
+            side_effect=(
+                CreditNoteAPIStateError(
+                    message=(
+                        "Only draft credit notes "
+                        "can be issued."
+                    ),
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.credit_note_issue_url(),
+                data=json.dumps({}),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            422,
+            "UNPROCESSABLE_ENTITY",
+        )
+
+    def test_collections_reject_delete(
+        self,
+    ):
+        sales_return_response = (
+            self.client.delete(
+                self.SALES_RETURNS_URL
+            )
+        )
+
+        credit_note_response = (
+            self.client.delete(
+                self.CREDIT_NOTES_URL
+            )
+        )
+
+        self.assert_error_contract(
+            sales_return_response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+        self.assert_error_contract(
+            credit_note_response,
             405,
             "METHOD_NOT_ALLOWED",
         )

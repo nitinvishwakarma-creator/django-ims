@@ -1,7 +1,22 @@
-from apps.sales.models import CreditNote
+from mongoengine.errors import (
+    ValidationError,
+)
+
+from apps.sales.models import (
+    CreditNote,
+)
 
 
 class CreditNoteRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return CreditNote.objects(
+            organization=organization,
+        )
 
     @staticmethod
     def create_credit_note(
@@ -24,12 +39,16 @@ class CreditNoteRepository:
     ):
         credit_note = CreditNote(
             organization=organization,
-            credit_note_number=credit_note_number,
+            credit_note_number=(
+                credit_note_number
+            ),
             invoice=invoice,
             sales_return=sales_return,
             customer=customer,
             status=status,
-            credit_note_date=credit_note_date,
+            credit_note_date=(
+                credit_note_date
+            ),
             items=items,
             subtotal=subtotal,
             tax_amount=tax_amount,
@@ -52,10 +71,24 @@ class CreditNoteRepository:
         organization,
         credit_note_id,
     ):
-        return CreditNote.objects(
-            organization=organization,
-            id=credit_note_id,
-        ).first()
+        try:
+            return (
+                CreditNoteRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=credit_note_id,
+                )
+                .first()
+            )
+
+        except (
+            ValidationError,
+            TypeError,
+            ValueError,
+        ):
+            return None
 
     @staticmethod
     def get_by_number(
@@ -63,10 +96,18 @@ class CreditNoteRepository:
         organization,
         credit_note_number,
     ):
-        return CreditNote.objects(
-            organization=organization,
-            credit_note_number=credit_note_number,
-        ).first()
+        return (
+            CreditNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                credit_note_number=(
+                    credit_note_number
+                ),
+            )
+            .first()
+        )
 
     @staticmethod
     def get_by_sales_return(
@@ -74,21 +115,32 @@ class CreditNoteRepository:
         organization,
         sales_return,
     ):
-        return CreditNote.objects(
-            organization=organization,
-            sales_return=sales_return,
-        ).first()
+        return (
+            CreditNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                sales_return=sales_return,
+            )
+            .first()
+        )
 
     @staticmethod
     def list_by_organization(
         *,
         organization,
     ):
-        return CreditNote.objects(
-            organization=organization,
-        ).order_by(
-            "-credit_note_date",
-            "-created_at",
+        return (
+            CreditNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .order_by(
+                "-credit_note_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -97,12 +149,19 @@ class CreditNoteRepository:
         organization,
         invoice,
     ):
-        return CreditNote.objects(
-            organization=organization,
-            invoice=invoice,
-        ).order_by(
-            "-credit_note_date",
-            "-created_at",
+        return (
+            CreditNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                invoice=invoice,
+            )
+            .order_by(
+                "-credit_note_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -111,12 +170,19 @@ class CreditNoteRepository:
         organization,
         customer,
     ):
-        return CreditNote.objects(
-            organization=organization,
-            customer=customer,
-        ).order_by(
-            "-credit_note_date",
-            "-created_at",
+        return (
+            CreditNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                customer=customer,
+            )
+            .order_by(
+                "-credit_note_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -125,12 +191,19 @@ class CreditNoteRepository:
         organization,
         status,
     ):
-        return CreditNote.objects(
-            organization=organization,
-            status=status,
-        ).order_by(
-            "-credit_note_date",
-            "-created_at",
+        return (
+            CreditNoteRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
+                status=status,
+            )
+            .order_by(
+                "-credit_note_date",
+                "-created_at",
+                "-id",
+            )
         )
 
     @staticmethod
@@ -144,7 +217,9 @@ class CreditNoteRepository:
         credit_note.status = status
 
         if issued_at is not None:
-            credit_note.issued_at = issued_at
+            credit_note.issued_at = (
+                issued_at
+            )
 
         if cancelled_at is not None:
             credit_note.cancelled_at = (

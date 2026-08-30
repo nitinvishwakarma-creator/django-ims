@@ -1979,6 +1979,237 @@ class APIDiscoveryService:
             },
         }
     @staticmethod
+    def get_sales_return_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/sales-returns/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "sales_returns.read",
+                    "POST":
+                        "sales_returns.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "customer_id":
+                        "object_id",
+                    "sales_order_id":
+                        "object_id",
+                    "invoice_id":
+                        "object_id",
+                    "warehouse_id":
+                        "object_id",
+                    "status":
+                        "string",
+                },
+                "create_fields": [
+                    "invoice_id",
+                    "return_date",
+                    "items",
+                    "reason",
+                    "notes",
+                ],
+                "required_create_fields": [
+                    "invoice_id",
+                    "items",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/sales-returns/"
+                    "{sales_return_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "sales_returns.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "confirm": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/sales-returns/"
+                    "{sales_return_id}/"
+                    "confirm/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "sales_returns.confirm",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "effects": [
+                    "inventory_restoration",
+                    "stock_movements",
+                ],
+                "status":
+                    "available",
+            },
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/sales-returns/"
+                    "{sales_return_id}/"
+                    "cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "sales_returns.cancel",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_credit_note_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/credit-notes/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "credit_notes.read",
+                    "POST":
+                        "credit_notes.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "customer_id":
+                        "object_id",
+                    "invoice_id":
+                        "object_id",
+                    "sales_return_id":
+                        "object_id",
+                    "status":
+                        "string",
+                },
+                "create_fields": [
+                    "sales_return_id",
+                    "credit_note_date",
+                    "reason",
+                    "notes",
+                ],
+                "required_create_fields": [
+                    "sales_return_id",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/credit-notes/"
+                    "{credit_note_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "credit_notes.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "issue": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/credit-notes/"
+                    "{credit_note_id}/issue/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "credit_notes.issue",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "effects": [
+                    "receivable_reduction",
+                    "accounting_journal",
+                ],
+                "status":
+                    "available",
+            },
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/credit-notes/"
+                    "{credit_note_id}/cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "credit_notes.cancel",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "status":
+                    "available",
+            },
+        }
+    @staticmethod
     def get_warehouse_endpoints():
         return {
             "collection": {
@@ -2385,6 +2616,15 @@ class APIDiscoveryService:
                         APIDiscoveryService
                         .get_invoice_endpoints()
                     ),
+                "sales_returns": (
+                    APIDiscoveryService
+                    .get_sales_return_endpoints()
+                ),
+
+                "credit_notes": (
+                    APIDiscoveryService
+                    .get_credit_note_endpoints()
+                ),
                 "customer_payments":
                     (
                         APIDiscoveryService

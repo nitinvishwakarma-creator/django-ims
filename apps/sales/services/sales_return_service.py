@@ -663,3 +663,85 @@ class SalesReturnService:
         )
 
         return sales_return
+
+    @staticmethod
+    def cancel_return(
+        *,
+        user,
+        organization,
+        sales_return,
+    ):
+        """
+        Cancel a draft sales return.
+
+        Confirmed returns cannot be cancelled
+        directly because confirmation has already
+        restored inventory.
+        """
+
+        SalesReturnService._check_permission(
+            user,
+            "sales_returns.cancel",
+        )
+
+        SalesReturnService._check_organization(
+            user,
+            organization,
+        )
+
+        if not sales_return:
+            raise ValueError(
+                "Sales return is required."
+            )
+
+        if (
+            sales_return.organization.id
+            != organization.id
+        ):
+            raise PermissionError(
+                "Sales return does not belong "
+                "to this organization."
+            )
+
+        if (
+            sales_return.status
+            ==
+            "CANCELLED"
+        ):
+            raise ValueError(
+                "Sales return is already "
+                "cancelled."
+            )
+
+        if (
+            sales_return.status
+            ==
+            "CONFIRMED"
+        ):
+            raise ValueError(
+                "Confirmed sales returns cannot "
+                "be cancelled directly because "
+                "inventory has already been "
+                "restored."
+            )
+
+        if (
+            sales_return.status
+            !=
+            "DRAFT"
+        ):
+            raise ValueError(
+                "Only draft sales returns "
+                "can be cancelled."
+            )
+
+        return (
+            SalesReturnRepository
+            .update_status(
+                sales_return=sales_return,
+                status="CANCELLED",
+                cancelled_at=(
+                    datetime.utcnow()
+                ),
+            )
+        )

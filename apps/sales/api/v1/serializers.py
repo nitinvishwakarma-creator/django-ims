@@ -1192,3 +1192,609 @@ class AccountsReceivableAPISerializer:
             "invoices":
                 serialized_invoices,
         }
+
+class SalesReturnAPISerializer:
+
+    @staticmethod
+    def _serialize_reference(
+        document,
+        *,
+        number_field,
+    ):
+        if not document:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    document.id
+                )
+            ),
+            number_field:
+                getattr(
+                    document,
+                    number_field,
+                    None,
+                ),
+            "status":
+                getattr(
+                    document,
+                    "status",
+                    None,
+                ),
+        }
+
+    @staticmethod
+    def _serialize_product(
+        product,
+    ):
+        if not product:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    product.id
+                )
+            ),
+            "sku":
+                product.sku,
+            "name":
+                product.name,
+            "unit":
+                product.unit,
+        }
+
+    @staticmethod
+    def _serialize_warehouse(
+        warehouse,
+    ):
+        if not warehouse:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    warehouse.id
+                )
+            ),
+            "code":
+                warehouse.code,
+            "name":
+                warehouse.name,
+            "city":
+                (
+                    warehouse.city
+                    or
+                    None
+                ),
+        }
+
+    @staticmethod
+    def _serialize_created_by(
+        user,
+    ):
+        if not user:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    user.id
+                )
+            ),
+            "email":
+                user.email,
+            "first_name":
+                user.first_name,
+            "last_name":
+                user.last_name,
+        }
+
+    @staticmethod
+    def serialize_item(
+        item,
+    ):
+        if not item:
+            return None
+
+        return {
+            "product": (
+                SalesReturnAPISerializer
+                ._serialize_product(
+                    item.product
+                )
+            ),
+            "quantity":
+                str(
+                    item.quantity
+                ),
+            "unit_price":
+                str(
+                    item.unit_price
+                ),
+            "tax_rate":
+                str(
+                    item.tax_rate
+                ),
+            "discount":
+                str(
+                    item.discount
+                ),
+            "line_subtotal":
+                str(
+                    item.line_subtotal
+                ),
+            "line_tax":
+                str(
+                    item.line_tax
+                ),
+            "line_total":
+                str(
+                    item.line_total
+                ),
+            "reason":
+                (
+                    item.reason
+                    or
+                    None
+                ),
+        }
+
+    @staticmethod
+    def serialize_summary(
+        sales_return,
+    ):
+        if not sales_return:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    sales_return.id
+                )
+            ),
+            "return_number":
+                sales_return.return_number,
+            "sales_order": (
+                SalesReturnAPISerializer
+                ._serialize_reference(
+                    sales_return.sales_order,
+                    number_field="so_number",
+                )
+            ),
+            "invoice": (
+                SalesReturnAPISerializer
+                ._serialize_reference(
+                    sales_return.invoice,
+                    number_field=(
+                        "invoice_number"
+                    ),
+                )
+            ),
+            "customer": (
+                CustomerAPISerializer
+                .serialize_summary(
+                    sales_return.customer
+                )
+            ),
+            "warehouse": (
+                SalesReturnAPISerializer
+                ._serialize_warehouse(
+                    sales_return.warehouse
+                )
+            ),
+            "status":
+                sales_return.status,
+            "return_date": (
+                APISerializationService
+                .serialize_datetime(
+                    sales_return.return_date
+                )
+            ),
+            "subtotal":
+                str(
+                    sales_return.subtotal
+                ),
+            "tax_amount":
+                str(
+                    sales_return.tax_amount
+                ),
+            "discount_amount":
+                str(
+                    sales_return.discount_amount
+                ),
+            "total_amount":
+                str(
+                    sales_return.total_amount
+                ),
+            "item_count":
+                len(
+                    sales_return.items
+                    or
+                    []
+                ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    sales_return.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    sales_return.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        sales_return,
+    ):
+        if not sales_return:
+            return None
+
+        summary = (
+            SalesReturnAPISerializer
+            .serialize_summary(
+                sales_return
+            )
+        )
+
+        return {
+            **summary,
+            "items": [
+                (
+                    SalesReturnAPISerializer
+                    .serialize_item(
+                        item
+                    )
+                )
+                for item
+                in (
+                    sales_return.items
+                    or
+                    []
+                )
+            ],
+            "reason":
+                (
+                    sales_return.reason
+                    or
+                    None
+                ),
+            "notes":
+                (
+                    sales_return.notes
+                    or
+                    None
+                ),
+            "created_by": (
+                SalesReturnAPISerializer
+                ._serialize_created_by(
+                    sales_return.created_by
+                )
+            ),
+            "confirmed_at": (
+                APISerializationService
+                .serialize_datetime(
+                    sales_return.confirmed_at
+                )
+            ),
+            "cancelled_at": (
+                APISerializationService
+                .serialize_datetime(
+                    sales_return.cancelled_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        sales_returns,
+    ):
+        return [
+            (
+                SalesReturnAPISerializer
+                .serialize_summary(
+                    sales_return
+                )
+            )
+            for sales_return
+            in sales_returns
+        ]
+
+class CreditNoteAPISerializer:
+
+    @staticmethod
+    def _serialize_reference(
+        document,
+        *,
+        number_field,
+    ):
+        if not document:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    document.id
+                )
+            ),
+            number_field:
+                getattr(
+                    document,
+                    number_field,
+                    None,
+                ),
+            "status":
+                getattr(
+                    document,
+                    "status",
+                    None,
+                ),
+        }
+
+    @staticmethod
+    def _serialize_product(
+        product,
+    ):
+        if not product:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    product.id
+                )
+            ),
+            "sku":
+                product.sku,
+            "name":
+                product.name,
+            "unit":
+                product.unit,
+        }
+
+    @staticmethod
+    def _serialize_created_by(
+        user,
+    ):
+        if not user:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    user.id
+                )
+            ),
+            "email":
+                user.email,
+            "first_name":
+                user.first_name,
+            "last_name":
+                user.last_name,
+        }
+
+    @staticmethod
+    def serialize_item(
+        item,
+    ):
+        if not item:
+            return None
+
+        return {
+            "product": (
+                CreditNoteAPISerializer
+                ._serialize_product(
+                    item.product
+                )
+            ),
+            "quantity":
+                str(
+                    item.quantity
+                ),
+            "unit_price":
+                str(
+                    item.unit_price
+                ),
+            "tax_rate":
+                str(
+                    item.tax_rate
+                ),
+            "discount":
+                str(
+                    item.discount
+                ),
+            "line_subtotal":
+                str(
+                    item.line_subtotal
+                ),
+            "line_tax":
+                str(
+                    item.line_tax
+                ),
+            "line_total":
+                str(
+                    item.line_total
+                ),
+        }
+
+    @staticmethod
+    def serialize_summary(
+        credit_note,
+    ):
+        if not credit_note:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    credit_note.id
+                )
+            ),
+            "credit_note_number":
+                credit_note.credit_note_number,
+            "invoice": (
+                CreditNoteAPISerializer
+                ._serialize_reference(
+                    credit_note.invoice,
+                    number_field=(
+                        "invoice_number"
+                    ),
+                )
+            ),
+            "sales_return": (
+                CreditNoteAPISerializer
+                ._serialize_reference(
+                    credit_note.sales_return,
+                    number_field=(
+                        "return_number"
+                    ),
+                )
+            ),
+            "customer": (
+                CustomerAPISerializer
+                .serialize_summary(
+                    credit_note.customer
+                )
+            ),
+            "status":
+                credit_note.status,
+            "credit_note_date": (
+                APISerializationService
+                .serialize_datetime(
+                    credit_note.credit_note_date
+                )
+            ),
+            "subtotal":
+                str(
+                    credit_note.subtotal
+                ),
+            "tax_amount":
+                str(
+                    credit_note.tax_amount
+                ),
+            "discount_amount":
+                str(
+                    credit_note.discount_amount
+                ),
+            "total_amount":
+                str(
+                    credit_note.total_amount
+                ),
+            "applied_amount":
+                str(
+                    credit_note.applied_amount
+                ),
+            "remaining_credit":
+                str(
+                    credit_note.remaining_credit
+                ),
+            "item_count":
+                len(
+                    credit_note.items
+                    or
+                    []
+                ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    credit_note.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    credit_note.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        credit_note,
+    ):
+        if not credit_note:
+            return None
+
+        summary = (
+            CreditNoteAPISerializer
+            .serialize_summary(
+                credit_note
+            )
+        )
+
+        return {
+            **summary,
+            "items": [
+                (
+                    CreditNoteAPISerializer
+                    .serialize_item(
+                        item
+                    )
+                )
+                for item
+                in (
+                    credit_note.items
+                    or
+                    []
+                )
+            ],
+            "reason":
+                (
+                    credit_note.reason
+                    or
+                    None
+                ),
+            "notes":
+                (
+                    credit_note.notes
+                    or
+                    None
+                ),
+            "created_by": (
+                CreditNoteAPISerializer
+                ._serialize_created_by(
+                    credit_note.created_by
+                )
+            ),
+            "issued_at": (
+                APISerializationService
+                .serialize_datetime(
+                    credit_note.issued_at
+                )
+            ),
+            "cancelled_at": (
+                APISerializationService
+                .serialize_datetime(
+                    credit_note.cancelled_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        credit_notes,
+    ):
+        return [
+            (
+                CreditNoteAPISerializer
+                .serialize_summary(
+                    credit_note
+                )
+            )
+            for credit_note
+            in credit_notes
+        ]

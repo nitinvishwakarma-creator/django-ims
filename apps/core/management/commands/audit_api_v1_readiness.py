@@ -564,6 +564,83 @@ class Command(
             ),
         )
         check(
+            "Sales Return collection route available",
+            route_exists(
+                "/api/v1/sales-returns/",
+            ),
+        )
+
+        check(
+            "Sales Return detail route available",
+            route_exists(
+                (
+                    "/api/v1/sales-returns/"
+                    "audit-sales-return-id/"
+                ),
+            ),
+        )
+
+        check(
+            "Sales Return confirmation route available",
+            route_exists(
+                (
+                    "/api/v1/sales-returns/"
+                    "audit-sales-return-id/"
+                    "confirm/"
+                ),
+            ),
+        )
+
+        check(
+            "Sales Return cancellation route available",
+            route_exists(
+                (
+                    "/api/v1/sales-returns/"
+                    "audit-sales-return-id/"
+                    "cancel/"
+                ),
+            ),
+        )
+
+        check(
+            "Credit Note collection route available",
+            route_exists(
+                "/api/v1/credit-notes/",
+            ),
+        )
+
+        check(
+            "Credit Note detail route available",
+            route_exists(
+                (
+                    "/api/v1/credit-notes/"
+                    "audit-credit-note-id/"
+                ),
+            ),
+        )
+
+        check(
+            "Credit Note issue route available",
+            route_exists(
+                (
+                    "/api/v1/credit-notes/"
+                    "audit-credit-note-id/"
+                    "issue/"
+                ),
+            ),
+        )
+
+        check(
+            "Credit Note cancellation route available",
+            route_exists(
+                (
+                    "/api/v1/credit-notes/"
+                    "audit-credit-note-id/"
+                    "cancel/"
+                ),
+            ),
+        )
+        check(
             "Customer payment collection route available",
             route_exists(
                 (
@@ -1131,6 +1208,20 @@ class Command(
                 )
             )
 
+            sales_return_endpoints = (
+                manifest_endpoints.get(
+                    "sales_returns",
+                    {},
+                )
+            )
+
+            credit_note_endpoints = (
+                manifest_endpoints.get(
+                    "credit_notes",
+                    {},
+                )
+            )
+
             invoice_endpoints = (
                 manifest_endpoints.get(
                     "invoices",
@@ -1283,6 +1374,122 @@ class Command(
                         "supports_partial_fulfillment"
                     )
                     is True
+                ),
+            )
+            check(
+                (
+                    "Discovery exposes Sales Return "
+                    "endpoints"
+                ),
+                all(
+                    endpoint_name
+                    in sales_return_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "confirm",
+                        "cancel",
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery documents Sales Return "
+                    "lifecycle"
+                ),
+                (
+                    "POST"
+                    in sales_return_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "methods",
+                        [],
+                    )
+                    and
+                    sales_return_endpoints
+                    .get(
+                        "confirm",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "sales_returns.confirm"
+                    and
+                    sales_return_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
+                ),
+            )
+            check(
+                (
+                    "Discovery exposes Credit Note "
+                    "endpoints"
+                ),
+                all(
+                    endpoint_name
+                    in credit_note_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "issue",
+                        "cancel",
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery documents Credit Note "
+                    "lifecycle"
+                ),
+                (
+                    "POST"
+                    in credit_note_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "methods",
+                        [],
+                    )
+                    and
+                    credit_note_endpoints
+                    .get(
+                        "issue",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "credit_notes.issue"
+                    and
+                    credit_note_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
                 ),
             )
             check(

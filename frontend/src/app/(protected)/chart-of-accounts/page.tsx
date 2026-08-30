@@ -299,7 +299,11 @@ export default function ChartOfAccountsPage() {
 
   return (
     <>
-      <div className="space-y-6">
+      <div
+        className="
+          space-y-6 text-slate-900
+        "
+      >
         <header
           className="
             flex flex-col gap-4

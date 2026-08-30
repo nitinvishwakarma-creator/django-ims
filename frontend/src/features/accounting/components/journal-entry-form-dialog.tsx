@@ -705,6 +705,9 @@ export default function JournalEntryFormDialog({
         </header>
 
         <form
+          className="
+            text-slate-900
+          "
           onSubmit={(event) => {
             void handleSubmit(
               submit,

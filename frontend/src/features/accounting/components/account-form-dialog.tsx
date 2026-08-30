@@ -421,7 +421,10 @@ export default function AccountFormDialog({
               submit,
             )(event);
           }}
-          className="space-y-5 p-6"
+          className="
+            space-y-5 p-6
+            text-slate-900
+          "
         >
           {errors.root?.server
           ||

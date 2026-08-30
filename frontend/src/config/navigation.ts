@@ -3,6 +3,8 @@ import type {
 } from "lucide-react";
 
 import {
+  BookOpen,
+  Scale,
   ArrowDownUp,
   Banknote,
   Boxes,
@@ -186,23 +188,46 @@ export const navigationSections:
       ],
     },
 
-    {
-      label: "Finance",
-      items: [
-        {
-          label: "Accounting",
-          href: "/accounting",
-          icon: ChartNoAxesCombined,
-          permission: "accounting_reports.read",
-        },
-        {
-          label: "Banking",
-          href: "/banking",
-          icon: Banknote,
-          permission: "bank_accounts.read",
-        },
-      ],
-    },
+      {
+        label: "Finance",
+        items: [
+          {
+            label: "Chart of Accounts",
+            href: "/chart-of-accounts",
+            icon: ChartNoAxesCombined,
+            permission:
+              "chart_of_accounts.read",
+          },
+          {
+            label: "Journal Entries",
+            href: "/journal-entries",
+            icon: ReceiptText,
+            permission:
+              "journal_entries.read",
+          },
+          {
+            label: "General Ledger",
+            href: "/general-ledger",
+            icon: BookOpen,
+            permission:
+              "general_ledger.read",
+          },
+          {
+            label: "Trial Balance",
+            href: "/trial-balance",
+            icon: Scale,
+            permission:
+              "trial_balance.read",
+          },
+          {
+            label: "Banking",
+            href: "/banking",
+            icon: Banknote,
+            permission:
+              "bank_accounts.read",
+          },
+        ],
+      },
 
     {
       label: "Administration",

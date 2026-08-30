@@ -386,7 +386,7 @@ class ChartOfAccountAPIService:
                         "account_code"
                     ),
                     field="account_code",
-                    maximum_length=50,
+                    maximum_length=30,
                 )
                 .upper()
             ),
@@ -397,7 +397,7 @@ class ChartOfAccountAPIService:
                         "account_name"
                     ),
                     field="account_name",
-                    maximum_length=200,
+                    maximum_length=150,
                 )
             ),
             "account_type": (
@@ -416,7 +416,7 @@ class ChartOfAccountAPIService:
                         "",
                     ),
                     field="account_subtype",
-                    maximum_length=100,
+                    maximum_length=50,
                 )
                 .upper()
             ),
@@ -504,7 +504,7 @@ class ChartOfAccountAPIService:
                         "account_name"
                     ],
                     field="account_name",
-                    maximum_length=200,
+                    maximum_length=150,
                 )
             )
 
@@ -518,7 +518,7 @@ class ChartOfAccountAPIService:
                         "account_subtype"
                     ],
                     field="account_subtype",
-                    maximum_length=100,
+                    maximum_length=50,
                 )
                 .upper()
             )

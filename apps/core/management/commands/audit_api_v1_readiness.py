@@ -823,7 +823,107 @@ class Command(
                 "/api/v1/vendor-debit-notes/",
             ),
         )
+        check(
+            (
+                "Chart of Account collection "
+                "route available"
+            ),
+            route_exists(
+                "/api/v1/chart-of-accounts/",
+            ),
+        )
 
+        check(
+            (
+                "Chart of Account detail "
+                "route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/chart-of-accounts/"
+                    "audit-account-id/"
+                ),
+            ),
+        )
+
+        check(
+            (
+                "Chart of Account deactivation "
+                "route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/chart-of-accounts/"
+                    "audit-account-id/deactivate/"
+                ),
+            ),
+        )
+
+        check(
+            (
+                "Journal Entry collection "
+                "route available"
+            ),
+            route_exists(
+                "/api/v1/journal-entries/",
+            ),
+        )
+
+        check(
+            (
+                "Journal Entry detail "
+                "route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/journal-entries/"
+                    "audit-journal-id/"
+                ),
+            ),
+        )
+
+        check(
+            (
+                "Journal Entry posting "
+                "route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/journal-entries/"
+                    "audit-journal-id/post/"
+                ),
+            ),
+        )
+
+        check(
+            (
+                "Journal Entry reversal "
+                "route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/journal-entries/"
+                    "audit-journal-id/reverse/"
+                ),
+            ),
+        )
+
+        check(
+            "General Ledger route available",
+            route_exists(
+                (
+                    "/api/v1/general-ledger/"
+                    "audit-account-id/"
+                ),
+            ),
+        )
+
+        check(
+            "Trial Balance route available",
+            route_exists(
+                "/api/v1/trial-balance/",
+            ),
+        )
         check(
             "Vendor Debit Note detail route available",
             route_exists(
@@ -1274,6 +1374,33 @@ class Command(
             vendor_debit_note_endpoints = (
                 manifest_endpoints.get(
                     "vendor_debit_notes",
+                    {},
+                )
+            )
+            chart_of_account_endpoints = (
+                manifest_endpoints.get(
+                    "chart_of_accounts",
+                    {},
+                )
+            )
+
+            journal_entry_endpoints = (
+                manifest_endpoints.get(
+                    "journal_entries",
+                    {},
+                )
+            )
+
+            general_ledger_endpoints = (
+                manifest_endpoints.get(
+                    "general_ledger",
+                    {},
+                )
+            )
+
+            trial_balance_endpoints = (
+                manifest_endpoints.get(
+                    "trial_balance",
                     {},
                 )
             )
@@ -2189,7 +2316,216 @@ class Command(
                     )
                 ),
             )
+            check(
+                (
+                    "Discovery exposes Chart of "
+                    "Account endpoints"
+                ),
+                all(
+                    endpoint_name
+                    in chart_of_account_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "deactivate",
+                    )
+                ),
+            )
 
+            check(
+                (
+                    "Discovery documents Chart of "
+                    "Account protection"
+                ),
+                (
+                    chart_of_account_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
+                    and
+                    "normal_balance"
+                    in
+                    chart_of_account_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "protected_fields",
+                        [],
+                    )
+                    and
+                    chart_of_account_endpoints
+                    .get(
+                        "deactivate",
+                        {},
+                    )
+                    .get(
+                        "system_accounts_protected"
+                    )
+                    is True
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes Journal "
+                    "Entry endpoints"
+                ),
+                all(
+                    endpoint_name
+                    in journal_entry_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "post",
+                        "reverse",
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery documents Journal "
+                    "Entry lifecycle"
+                ),
+                (
+                    journal_entry_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "forced_source_type"
+                    )
+                    ==
+                    "MANUAL"
+                    and
+                    journal_entry_endpoints
+                    .get(
+                        "post",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "journal_entries.post"
+                    and
+                    journal_entry_endpoints
+                    .get(
+                        "reverse",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "journal_entries.reverse"
+                    and
+                    journal_entry_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes General "
+                    "Ledger endpoint"
+                ),
+                (
+                    general_ledger_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    (
+                        "/api/v1/general-ledger/"
+                        "{account_id}/"
+                    )
+                    and
+                    general_ledger_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "general_ledger.read"
+                    and
+                    general_ledger_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "posted_journals_only"
+                    )
+                    is True
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes Trial "
+                    "Balance endpoint"
+                ),
+                (
+                    trial_balance_endpoints
+                    .get(
+                        "summary",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/trial-balance/"
+                    and
+                    trial_balance_endpoints
+                    .get(
+                        "summary",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "trial_balance.read"
+                    and
+                    trial_balance_endpoints
+                    .get(
+                        "summary",
+                        {},
+                    )
+                    .get(
+                        "posted_journals_only"
+                    )
+                    is True
+                ),
+            )
             check(
                 "Discovery documents Vendor Debit Note lifecycle",
                 (

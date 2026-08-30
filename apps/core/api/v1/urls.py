@@ -68,6 +68,16 @@ urlpatterns = [
         "",
         include(
             (
+                "apps.finance.api.v1.urls",
+                "finance_api_v1",
+            ),
+            namespace="finance_api_v1",
+        ),
+    ),
+    path(
+        "",
+        include(
+            (
                 "apps.purchasing.api.v1.urls",
                 "purchasing_api_v1",
             ),

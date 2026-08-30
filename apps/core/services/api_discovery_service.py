@@ -2209,6 +2209,370 @@ class APIDiscoveryService:
                     "available",
             },
         }
+
+    @staticmethod
+    def get_chart_of_account_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "chart-of-accounts/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "chart_of_accounts.read",
+                    "POST":
+                        "chart_of_accounts.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "account_type":
+                        "string",
+                    "account_subtype":
+                        "string",
+                    "normal_balance":
+                        "string",
+                    "is_system_account":
+                        "boolean",
+                    "is_active":
+                        "boolean",
+                    "allow_manual_posting":
+                        "boolean",
+                },
+                "create_fields": [
+                    "account_code",
+                    "account_name",
+                    "account_type",
+                    "account_subtype",
+                    "description",
+                    "allow_manual_posting",
+                ],
+                "required_create_fields": [
+                    "account_code",
+                    "account_name",
+                    "account_type",
+                ],
+                "protected_fields": [
+                    "organization_id",
+                    "normal_balance",
+                    "system_key",
+                    "is_system_account",
+                    "is_active",
+                    "created_by",
+                    "created_at",
+                    "updated_at",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                    "PATCH",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "chart-of-accounts/"
+                    "{account_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "chart_of_accounts.read",
+                    "PATCH":
+                        "chart_of_accounts.update",
+                },
+                "editable_fields": [
+                    "account_name",
+                    "account_subtype",
+                    "description",
+                    "allow_manual_posting",
+                ],
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "deactivate": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "chart-of-accounts/"
+                    "{account_id}/deactivate/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission": (
+                    "chart_of_accounts."
+                    "deactivate"
+                ),
+                "system_accounts_protected":
+                    True,
+                "hard_delete":
+                    False,
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_journal_entry_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "journal-entries/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "journal_entries.read",
+                    "POST":
+                        "journal_entries.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "status":
+                        "string",
+                    "source_type":
+                        "string",
+                    "source_id":
+                        "string",
+                },
+                "create_fields": [
+                    "journal_date",
+                    "description",
+                    "lines",
+                ],
+                "required_create_fields": [
+                    "journal_date",
+                    "lines",
+                ],
+                "line_fields": [
+                    "account_id",
+                    "description",
+                    "debit",
+                    "credit",
+                ],
+                "forced_source_type":
+                    "MANUAL",
+                "protected_fields": [
+                    "organization_id",
+                    "journal_number",
+                    "source_type",
+                    "source_id",
+                    "status",
+                    "total_debit",
+                    "total_credit",
+                    "posted_at",
+                    "reversed_at",
+                    "reversed_by",
+                    "reversal_of",
+                    "created_by",
+                    "created_at",
+                    "updated_at",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                    "PATCH",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "journal-entries/"
+                    "{journal_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "journal_entries.read",
+                    "PATCH":
+                        "journal_entries.create",
+                },
+                "editable_statuses": [
+                    "DRAFT",
+                ],
+                "editable_fields": [
+                    "journal_date",
+                    "description",
+                    "lines",
+                ],
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "post": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "journal-entries/"
+                    "{journal_id}/post/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "journal_entries.post",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "effects": [
+                    "journal_validation",
+                    "ledger_posting",
+                ],
+                "status":
+                    "available",
+            },
+            "reverse": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "journal-entries/"
+                    "{journal_id}/reverse/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "journal_entries.reverse",
+                "from_statuses": [
+                    "POSTED",
+                ],
+                "fields": [
+                    "reversal_date",
+                    "description",
+                ],
+                "effects": [
+                    "reversal_journal_creation",
+                    "reversal_journal_posting",
+                    "original_journal_reversal",
+                ],
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_general_ledger_endpoints():
+        return {
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "general-ledger/"
+                    "{account_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "general_ledger.read",
+                "query_parameters": {
+                    "start_date":
+                        "ISO-8601 date or datetime",
+                    "end_date":
+                        "ISO-8601 date or datetime",
+                },
+                "posted_journals_only":
+                    True,
+                "includes": [
+                    "opening_balance",
+                    "movements",
+                    "running_balance",
+                    "closing_balance",
+                ],
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_trial_balance_endpoints():
+        return {
+            "summary": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "trial-balance/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "trial_balance.read",
+                "query_parameters": {
+                    "as_of_date":
+                        "ISO-8601 date or datetime",
+                    "include_zero_balances":
+                        "boolean",
+                },
+                "posted_journals_only":
+                    True,
+                "includes": [
+                    "account_balances",
+                    "total_debit_balance",
+                    "total_credit_balance",
+                    "difference",
+                    "is_balanced",
+                ],
+                "status":
+                    "available",
+            },
+        }
+
     @staticmethod
     def get_warehouse_endpoints():
         return {
@@ -2663,6 +3027,27 @@ class APIDiscoveryService:
                     APIDiscoveryService
                     .get_vendor_debit_note_endpoints()
                 ),
+
+                "chart_of_accounts": (
+                    APIDiscoveryService
+                    .get_chart_of_account_endpoints()
+                ),
+
+                "journal_entries": (
+                    APIDiscoveryService
+                    .get_journal_entry_endpoints()
+                ),
+
+                "general_ledger": (
+                    APIDiscoveryService
+                    .get_general_ledger_endpoints()
+                ),
+
+                "trial_balance": (
+                    APIDiscoveryService
+                    .get_trial_balance_endpoints()
+                ),
+
                 "warehouses":
                     (
                         APIDiscoveryService

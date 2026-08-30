@@ -1,4 +1,10 @@
-from datetime import datetime
+from datetime import (
+    datetime,
+)
+
+from mongoengine.errors import (
+    ValidationError,
+)
 
 from apps.finance.models import (
     ChartOfAccount,
@@ -6,6 +12,15 @@ from apps.finance.models import (
 
 
 class ChartOfAccountRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return ChartOfAccount.objects(
+            organization=organization,
+        )
 
     @staticmethod
     def create_account(
@@ -32,7 +47,9 @@ class ChartOfAccountRepository:
             system_key=system_key,
             description=description,
             is_system_account=is_system_account,
-            allow_manual_posting=allow_manual_posting,
+            allow_manual_posting=(
+                allow_manual_posting
+            ),
             is_active=True,
             created_by=created_by,
             created_at=datetime.utcnow(),
@@ -49,13 +66,24 @@ class ChartOfAccountRepository:
         organization,
         account_id,
     ):
-        return (
-            ChartOfAccount.objects(
-                organization=organization,
-                id=account_id,
+        try:
+            return (
+                ChartOfAccountRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=account_id,
+                )
+                .first()
             )
-            .first()
-        )
+
+        except (
+            ValidationError,
+            TypeError,
+            ValueError,
+        ):
+            return None
 
     @staticmethod
     def get_by_code(
@@ -64,8 +92,11 @@ class ChartOfAccountRepository:
         account_code,
     ):
         return (
-            ChartOfAccount.objects(
+            ChartOfAccountRepository
+            .queryset_for_organization(
                 organization=organization,
+            )
+            .filter(
                 account_code=str(
                     account_code
                 ).strip(),
@@ -81,12 +112,11 @@ class ChartOfAccountRepository:
         active_only=True,
     ):
         query = {
-            "organization":
-                organization,
             "system_key":
                 str(
                     system_key
-                    or ""
+                    or
+                    ""
                 )
                 .strip()
                 .upper(),
@@ -98,7 +128,11 @@ class ChartOfAccountRepository:
             ] = True
 
         return (
-            ChartOfAccount.objects(
+            ChartOfAccountRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
                 **query
             )
             .first()
@@ -111,10 +145,7 @@ class ChartOfAccountRepository:
         account_type=None,
         is_active=None,
     ):
-        query = {
-            "organization":
-                organization,
-        }
+        query = {}
 
         if account_type is not None:
             query[
@@ -131,11 +162,16 @@ class ChartOfAccountRepository:
             )
 
         return (
-            ChartOfAccount.objects(
+            ChartOfAccountRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
                 **query
             )
             .order_by(
-                "account_code"
+                "account_code",
+                "id",
             )
         )
 

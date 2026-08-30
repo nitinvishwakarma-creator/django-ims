@@ -1,4 +1,10 @@
-from datetime import datetime
+from datetime import (
+    datetime,
+)
+
+from mongoengine.errors import (
+    ValidationError,
+)
 
 from apps.finance.models import (
     JournalEntry,
@@ -6,6 +12,15 @@ from apps.finance.models import (
 
 
 class JournalEntryRepository:
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return JournalEntry.objects(
+            organization=organization,
+        )
 
     @staticmethod
     def create_journal(
@@ -51,13 +66,24 @@ class JournalEntryRepository:
         organization,
         journal_id,
     ):
-        return (
-            JournalEntry.objects(
-                organization=organization,
-                id=journal_id,
+        try:
+            return (
+                JournalEntryRepository
+                .queryset_for_organization(
+                    organization=organization,
+                )
+                .filter(
+                    id=journal_id,
+                )
+                .first()
             )
-            .first()
-        )
+
+        except (
+            ValidationError,
+            TypeError,
+            ValueError,
+        ):
+            return None
 
     @staticmethod
     def get_by_number(
@@ -66,10 +92,15 @@ class JournalEntryRepository:
         journal_number,
     ):
         return (
-            JournalEntry.objects(
+            JournalEntryRepository
+            .queryset_for_organization(
                 organization=organization,
+            )
+            .filter(
                 journal_number=str(
-                    journal_number or ""
+                    journal_number
+                    or
+                    ""
                 ).strip(),
             )
             .first()
@@ -83,13 +114,20 @@ class JournalEntryRepository:
         source_id,
     ):
         return (
-            JournalEntry.objects(
+            JournalEntryRepository
+            .queryset_for_organization(
                 organization=organization,
+            )
+            .filter(
                 source_type=str(
-                    source_type or ""
+                    source_type
+                    or
+                    ""
                 ).strip().upper(),
                 source_id=str(
-                    source_id or ""
+                    source_id
+                    or
+                    ""
                 ).strip(),
             )
             .first()
@@ -102,10 +140,7 @@ class JournalEntryRepository:
         status=None,
         source_type=None,
     ):
-        query = {
-            "organization":
-                organization,
-        }
+        query = {}
 
         if status is not None:
             query[
@@ -122,12 +157,17 @@ class JournalEntryRepository:
             ).strip().upper()
 
         return (
-            JournalEntry.objects(
+            JournalEntryRepository
+            .queryset_for_organization(
+                organization=organization,
+            )
+            .filter(
                 **query
             )
             .order_by(
                 "-journal_date",
                 "-created_at",
+                "-id",
             )
         )
 
@@ -180,14 +220,8 @@ class JournalEntryRepository:
         journal,
         posted_at,
     ):
-        journal.status = (
-            "POSTED"
-        )
-
-        journal.posted_at = (
-            posted_at
-        )
-
+        journal.status = "POSTED"
+        journal.posted_at = posted_at
         journal.updated_at = (
             datetime.utcnow()
         )
@@ -203,18 +237,11 @@ class JournalEntryRepository:
         reversal_journal,
         reversed_at,
     ):
-        journal.status = (
-            "REVERSED"
-        )
-
-        journal.reversed_at = (
-            reversed_at
-        )
-
+        journal.status = "REVERSED"
+        journal.reversed_at = reversed_at
         journal.reversed_by = (
             reversal_journal
         )
-
         journal.updated_at = (
             datetime.utcnow()
         )

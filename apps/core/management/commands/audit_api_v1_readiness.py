@@ -1079,6 +1079,91 @@ class Command(
             ),
         )
         check(
+            (
+                "Bank Payment Suggestion "
+                "collection route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                ),
+            ),
+        )
+
+        check(
+            (
+                "Bank Payment Suggestion "
+                "detail route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                    "audit-suggestion-id/"
+                ),
+            ),
+        )
+
+        check(
+            (
+                "Bank Payment Suggestion "
+                "generation route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/bank-statements/"
+                    "audit-statement-id/lines/"
+                    "1/payment-suggestion/"
+                ),
+            ),
+        )
+
+        check(
+            (
+                "Bank Payment Suggestion "
+                "confirmation route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                    "audit-suggestion-id/"
+                    "confirm/"
+                ),
+            ),
+        )
+
+        check(
+            (
+                "Bank Payment Suggestion "
+                "rejection route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                    "audit-suggestion-id/"
+                    "reject/"
+                ),
+            ),
+        )
+
+        check(
+            (
+                "Bank Payment Suggestion "
+                "execution route available"
+            ),
+            route_exists(
+                (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                    "audit-suggestion-id/"
+                    "execute/"
+                ),
+            ),
+        )
+        check(
             "Vendor Debit Note detail route available",
             route_exists(
                 (
@@ -1582,6 +1667,13 @@ class Command(
             bank_statement_endpoints = (
                 manifest_endpoints.get(
                     "bank_statements",
+                    {},
+                )
+            )
+
+            bank_payment_suggestion_endpoints = (
+                manifest_endpoints.get(
+                    "bank_payment_suggestions",
                     {},
                 )
             )
@@ -2969,6 +3061,79 @@ class Command(
                     )
                     ==
                     "bank_statements.reconcile"
+                ),
+            )
+            check(
+                (
+                    "Discovery exposes Bank Payment "
+                    "Suggestion endpoints"
+                ),
+                all(
+                    endpoint_name
+                    in bank_payment_suggestion_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "generate",
+                        "confirm",
+                        "reject",
+                        "execute",
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery documents Bank Payment "
+                    "Suggestion lifecycle"
+                ),
+                (
+                    bank_payment_suggestion_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    (
+                        "/api/v1/"
+                        "bank-payment-suggestions/"
+                    )
+                    and
+                    bank_payment_suggestion_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
+                    and
+                    bank_payment_suggestion_endpoints
+                    .get(
+                        "generate",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "bank_statements.reconcile"
+                    and
+                    bank_payment_suggestion_endpoints
+                    .get(
+                        "execute",
+                        {},
+                    )
+                    .get(
+                        "compensation_on_failure"
+                    )
+                    is True
                 ),
             )
             check(

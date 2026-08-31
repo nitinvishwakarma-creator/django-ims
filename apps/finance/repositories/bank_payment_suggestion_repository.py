@@ -8,6 +8,24 @@ from apps.finance.models import (
 class BankPaymentSuggestionRepository:
 
     @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        """
+        Return a tenant-scoped payment suggestion
+        queryset for API filtering, searching,
+        sorting, and pagination.
+        """
+
+        return (
+            BankPaymentSuggestion
+            .objects(
+                organization=organization,
+            )
+        )
+
+    @staticmethod
     def create_suggestion(
         *,
         organization,

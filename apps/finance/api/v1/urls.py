@@ -5,6 +5,7 @@ from django.urls import (
 from apps.finance.api.v1 import (
     accounting_report_views,
     bank_account_views,
+    bank_payment_suggestion_views,
     bank_statement_views,
     bank_transaction_views,
     bank_transfer_views,
@@ -125,6 +126,88 @@ urlpatterns = [
             .bank_transfer_detail_api
         ),
         name="bank_transfer_detail",
+    ),
+    path(
+        "bank-payment-suggestions/",
+        (
+            bank_payment_suggestion_views
+            .bank_payment_suggestion_collection_api
+        ),
+        name=(
+            "bank_payment_suggestion_collection"
+        ),
+    ),
+
+    path(
+        (
+            "bank-payment-suggestions/"
+            "<str:suggestion_id>/confirm/"
+        ),
+        (
+            bank_payment_suggestion_views
+            .bank_payment_suggestion_confirm_api
+        ),
+        name=(
+            "bank_payment_suggestion_confirm"
+        ),
+    ),
+
+    path(
+        (
+            "bank-payment-suggestions/"
+            "<str:suggestion_id>/reject/"
+        ),
+        (
+            bank_payment_suggestion_views
+            .bank_payment_suggestion_reject_api
+        ),
+        name=(
+            "bank_payment_suggestion_reject"
+        ),
+    ),
+
+    path(
+        (
+            "bank-payment-suggestions/"
+            "<str:suggestion_id>/execute/"
+        ),
+        (
+            bank_payment_suggestion_views
+            .bank_payment_suggestion_execute_api
+        ),
+        name=(
+            "bank_payment_suggestion_execute"
+        ),
+    ),
+
+    path(
+        (
+            "bank-payment-suggestions/"
+            "<str:suggestion_id>/"
+        ),
+        (
+            bank_payment_suggestion_views
+            .bank_payment_suggestion_detail_api
+        ),
+        name=(
+            "bank_payment_suggestion_detail"
+        ),
+    ),
+
+    path(
+        (
+            "bank-statements/"
+            "<str:statement_id>/lines/"
+            "<str:line_number>/"
+            "payment-suggestion/"
+        ),
+        (
+            bank_payment_suggestion_views
+            .bank_payment_suggestion_generate_api
+        ),
+        name=(
+            "bank_payment_suggestion_generate"
+        ),
     ),
     path(
         "bank-statements/",

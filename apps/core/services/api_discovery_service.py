@@ -3096,6 +3096,169 @@ class APIDiscoveryService:
             },
         }
 
+    @staticmethod
+    def get_bank_payment_suggestion_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.read",
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "statement_id":
+                        "object_id",
+                    "invoice_id":
+                        "object_id",
+                    "vendor_bill_id":
+                        "object_id",
+                    "suggestion_type":
+                        "string",
+                    "status":
+                        "string",
+                },
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                    "{suggestion_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "generate": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-statements/"
+                    "{statement_id}/lines/"
+                    "{line_number}/"
+                    "payment-suggestion/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.reconcile",
+                "from_line_statuses": [
+                    "UNMATCHED",
+                ],
+                "suggestion_types": [
+                    "CUSTOMER_RECEIPT",
+                    "SUPPLIER_PAYMENT",
+                ],
+                "status":
+                    "available",
+            },
+            "confirm": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                    "{suggestion_id}/confirm/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.reconcile",
+                "from_statuses": [
+                    "PENDING",
+                ],
+                "to_status":
+                    "CONFIRMED",
+                "status":
+                    "available",
+            },
+            "reject": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                    "{suggestion_id}/reject/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.reconcile",
+                "from_statuses": [
+                    "PENDING",
+                ],
+                "to_status":
+                    "REJECTED",
+                "status":
+                    "available",
+            },
+            "execute": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/"
+                    "bank-payment-suggestions/"
+                    "{suggestion_id}/execute/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.reconcile",
+                "from_statuses": [
+                    "CONFIRMED",
+                ],
+                "requires_unmatched_line":
+                    True,
+                "effects": [
+                    "customer_or_supplier_payment",
+                    "bank_transaction",
+                    "statement_line_match",
+                    "transaction_reconciliation",
+                    "statement_status_update",
+                ],
+                "compensation_on_failure":
+                    True,
+                "status":
+                    "available",
+            },
+        }
 
     @staticmethod
     def get_warehouse_endpoints():
@@ -3590,6 +3753,11 @@ class APIDiscoveryService:
                 "bank_statements": (
                     APIDiscoveryService
                     .get_bank_statement_endpoints()
+                ),
+
+                "bank_payment_suggestions": (
+                    APIDiscoveryService
+                    .get_bank_payment_suggestion_endpoints()
                 ),
 
                 "warehouses":

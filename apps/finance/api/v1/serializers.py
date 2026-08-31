@@ -1,7 +1,14 @@
 from apps.core.services.api_serialization_service import (
     APISerializationService,
 )
-
+from apps.purchasing.api.v1.serializers import (
+    SupplierPaymentAPISerializer,
+    VendorBillAPISerializer,
+)
+from apps.sales.api.v1.serializers import (
+    CustomerPaymentAPISerializer,
+    InvoiceAPISerializer,
+)
 
 class ChartOfAccountAPISerializer:
 
@@ -1173,4 +1180,198 @@ class BankStatementAPISerializer:
             )
             for statement
             in statements
+        ]
+
+class BankPaymentSuggestionAPISerializer:
+
+    @staticmethod
+    def serialize_summary(
+        suggestion,
+    ):
+        if not suggestion:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    suggestion.id
+                )
+            ),
+            "statement": (
+                BankStatementAPISerializer
+                .serialize_summary(
+                    suggestion.statement
+                )
+            ),
+            "line_number":
+                suggestion.line_number,
+            "suggestion_type":
+                suggestion.suggestion_type,
+            "invoice": (
+                InvoiceAPISerializer
+                .serialize_summary(
+                    suggestion.invoice
+                )
+                if suggestion.invoice
+                else None
+            ),
+            "vendor_bill": (
+                VendorBillAPISerializer
+                .serialize_summary(
+                    suggestion.vendor_bill
+                )
+                if suggestion.vendor_bill
+                else None
+            ),
+            "amount":
+                str(
+                    suggestion.amount
+                ),
+            "confidence":
+                str(
+                    suggestion.confidence
+                ),
+            "match_reason":
+                (
+                    suggestion.match_reason
+                    or
+                    None
+                ),
+            "status":
+                suggestion.status,
+            "is_executed":
+                bool(
+                    suggestion.executed_at
+                    is not None
+                ),
+            "payment_reference":
+                (
+                    suggestion.payment_reference
+                    or
+                    None
+                ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    suggestion.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    suggestion.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        suggestion,
+    ):
+        if not suggestion:
+            return None
+
+        summary = (
+            BankPaymentSuggestionAPISerializer
+            .serialize_summary(
+                suggestion
+            )
+        )
+
+        return {
+            **summary,
+            "confirmed_at": (
+                APISerializationService
+                .serialize_datetime(
+                    suggestion.confirmed_at
+                )
+            ),
+            "rejected_at": (
+                APISerializationService
+                .serialize_datetime(
+                    suggestion.rejected_at
+                )
+            ),
+            "executed_at": (
+                APISerializationService
+                .serialize_datetime(
+                    suggestion.executed_at
+                )
+            ),
+            "created_by": (
+                BankAccountAPISerializer
+                ._serialize_created_by(
+                    suggestion.created_by
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_execution(
+        result,
+    ):
+        if not result:
+            return None
+
+        suggestion = (
+            result["suggestion"]
+        )
+
+        payment = (
+            result["payment"]
+        )
+
+        if (
+            suggestion.suggestion_type
+            ==
+            "CUSTOMER_RECEIPT"
+        ):
+            serialized_payment = (
+                CustomerPaymentAPISerializer
+                .serialize_detail(
+                    payment
+                )
+            )
+
+        else:
+            serialized_payment = (
+                SupplierPaymentAPISerializer
+                .serialize_detail(
+                    payment
+                )
+            )
+
+        return {
+            "suggestion": (
+                BankPaymentSuggestionAPISerializer
+                .serialize_detail(
+                    suggestion
+                )
+            ),
+            "payment":
+                serialized_payment,
+            "bank_transaction": (
+                BankTransactionAPISerializer
+                .serialize_detail(
+                    result[
+                        "bank_transaction"
+                    ]
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        suggestions,
+    ):
+        return [
+            (
+                BankPaymentSuggestionAPISerializer
+                .serialize_summary(
+                    suggestion
+                )
+            )
+            for suggestion
+            in suggestions
         ]

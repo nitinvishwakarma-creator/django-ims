@@ -117,3 +117,12 @@ class BankTransferRepository:
         transfer.save()
 
         return transfer
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return BankTransfer.objects(
+            organization=organization,
+        )

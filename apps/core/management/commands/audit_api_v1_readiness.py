@@ -925,6 +925,100 @@ class Command(
             ),
         )
         check(
+            "Bank Account collection route available",
+            route_exists(
+                "/api/v1/bank-accounts/",
+            ),
+        )
+
+        check(
+            "Bank Account detail route available",
+            route_exists(
+                (
+                    "/api/v1/bank-accounts/"
+                    "audit-bank-account-id/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Account deactivation route available",
+            route_exists(
+                (
+                    "/api/v1/bank-accounts/"
+                    "audit-bank-account-id/"
+                    "deactivate/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Transaction collection route available",
+            route_exists(
+                "/api/v1/bank-transactions/",
+            ),
+        )
+
+        check(
+            "Bank Transaction detail route available",
+            route_exists(
+                (
+                    "/api/v1/bank-transactions/"
+                    "audit-transaction-id/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Transaction reconciliation route available",
+            route_exists(
+                (
+                    "/api/v1/bank-transactions/"
+                    "audit-transaction-id/"
+                    "reconcile/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Transfer collection route available",
+            route_exists(
+                "/api/v1/bank-transfers/",
+            ),
+        )
+
+        check(
+            "Bank Transfer detail route available",
+            route_exists(
+                (
+                    "/api/v1/bank-transfers/"
+                    "audit-transfer-id/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Transfer posting route available",
+            route_exists(
+                (
+                    "/api/v1/bank-transfers/"
+                    "audit-transfer-id/"
+                    "post/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Transfer cancellation route available",
+            route_exists(
+                (
+                    "/api/v1/bank-transfers/"
+                    "audit-transfer-id/"
+                    "cancel/"
+                ),
+            ),
+        )
+        check(
             "Vendor Debit Note detail route available",
             route_exists(
                 (
@@ -1401,6 +1495,26 @@ class Command(
             trial_balance_endpoints = (
                 manifest_endpoints.get(
                     "trial_balance",
+                    {},
+                )
+            )
+            bank_account_endpoints = (
+                manifest_endpoints.get(
+                    "bank_accounts",
+                    {},
+                )
+            )
+
+            bank_transaction_endpoints = (
+                manifest_endpoints.get(
+                    "bank_transactions",
+                    {},
+                )
+            )
+
+            bank_transfer_endpoints = (
+                manifest_endpoints.get(
+                    "bank_transfers",
                     {},
                 )
             )
@@ -2550,6 +2664,146 @@ class Command(
                     )
                     ==
                     "not_found"
+                ),
+            )
+            check(
+                (
+                    "Discovery exposes Bank Account "
+                    "management endpoints"
+                ),
+                (
+                    bank_account_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/bank-accounts/"
+                    and
+                    all(
+                        endpoint_name
+                        in bank_account_endpoints
+                        for endpoint_name
+                        in (
+                            "collection",
+                            "detail",
+                            "deactivate",
+                        )
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery documents Bank Account "
+                    "protection"
+                ),
+                (
+                    bank_account_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
+                    and
+                    "current_balance"
+                    in
+                    bank_account_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "protected_fields",
+                        [],
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes Bank Transaction "
+                    "endpoints"
+                ),
+                all(
+                    endpoint_name
+                    in bank_transaction_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "reconcile",
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery protects system Bank "
+                    "Transaction types"
+                ),
+                (
+                    "TRANSFER_IN"
+                    in
+                    bank_transaction_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "system_transaction_types",
+                        [],
+                    )
+                    and
+                    "TRANSFER_IN"
+                    not in
+                    bank_transaction_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "manual_transaction_types",
+                        [],
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery exposes Bank Transfer "
+                    "lifecycle"
+                ),
+                (
+                    all(
+                        endpoint_name
+                        in bank_transfer_endpoints
+                        for endpoint_name
+                        in (
+                            "collection",
+                            "detail",
+                            "post",
+                            "cancel",
+                        )
+                    )
+                    and
+                    bank_transfer_endpoints
+                    .get(
+                        "post",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "bank_transfers.post"
                 ),
             )
             check(

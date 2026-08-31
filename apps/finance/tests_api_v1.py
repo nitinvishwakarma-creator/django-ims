@@ -57,6 +57,30 @@ from apps.finance.services.journal_entry_api_service import (
     JournalEntryAPIStateError,
     JournalEntryAPIValidationError,
 )
+from apps.finance.repositories.bank_account_repository import (
+    BankAccountRepository,
+)
+from apps.finance.repositories.bank_transaction_repository import (
+    BankTransactionRepository,
+)
+from apps.finance.repositories.bank_transfer_repository import (
+    BankTransferRepository,
+)
+from apps.finance.services.bank_account_api_service import (
+    BankAccountAPIService,
+    BankAccountAPIStateError,
+    BankAccountAPIValidationError,
+)
+from apps.finance.services.bank_transaction_api_service import (
+    BankTransactionAPIService,
+    BankTransactionAPIStateError,
+    BankTransactionAPIValidationError,
+)
+from apps.finance.services.bank_transfer_api_service import (
+    BankTransferAPIService,
+    BankTransferAPIStateError,
+    BankTransferAPIValidationError,
+)
 from apps.organizations.api_context_service import (
     APIOrganizationContextService,
 )
@@ -76,6 +100,17 @@ class FinanceAPIV1RegressionTestCase(
 
     TRIAL_BALANCE_URL = (
         "/api/v1/trial-balance/"
+    )
+    BANK_ACCOUNTS_URL = (
+        "/api/v1/bank-accounts/"
+    )
+
+    BANK_TRANSACTIONS_URL = (
+        "/api/v1/bank-transactions/"
+    )
+
+    BANK_TRANSFERS_URL = (
+        "/api/v1/bank-transfers/"
     )
 
     def setUp(self):
@@ -272,6 +307,131 @@ class FinanceAPIV1RegressionTestCase(
                 }
             )
         )
+        self.bank_account = (
+            SimpleNamespace(
+                id=ObjectId(),
+                organization=(
+                    self.organization
+                ),
+                account_name=(
+                    "Operating Bank"
+                ),
+                account_type="BANK",
+                bank_name="Example Bank",
+                account_number="1234567890",
+                ifsc_code="EXAM0001234",
+                currency="INR",
+                opening_balance=Decimal(
+                    "1000.00"
+                ),
+                current_balance=Decimal(
+                    "1250.00"
+                ),
+                is_active=True,
+                created_by=self.user,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+        self.destination_bank_account = (
+            SimpleNamespace(
+                id=ObjectId(),
+                organization=(
+                    self.organization
+                ),
+                account_name=(
+                    "Secondary Bank"
+                ),
+                account_type="BANK",
+                bank_name="Second Bank",
+                account_number="9876543210",
+                ifsc_code="SECO0005678",
+                currency="INR",
+                opening_balance=Decimal(
+                    "500.00"
+                ),
+                current_balance=Decimal(
+                    "500.00"
+                ),
+                is_active=True,
+                created_by=self.user,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+        self.bank_transaction = (
+            SimpleNamespace(
+                id=ObjectId(),
+                organization=(
+                    self.organization
+                ),
+                bank_account=(
+                    self.bank_account
+                ),
+                transaction_number=(
+                    "BTX-TEST000001"
+                ),
+                transaction_type="MONEY_IN",
+                transaction_date=now,
+                amount=Decimal(
+                    "250.00"
+                ),
+                balance_before=Decimal(
+                    "1000.00"
+                ),
+                balance_after=Decimal(
+                    "1250.00"
+                ),
+                reference_type="",
+                reference_id="",
+                external_reference=(
+                    "UTR-TEST-001"
+                ),
+                description=(
+                    "Customer receipt"
+                ),
+                reconciliation_status=(
+                    "UNRECONCILED"
+                ),
+                reconciled_at=None,
+                created_by=self.user,
+                created_at=now,
+            )
+        )
+
+        self.bank_transfer = (
+            SimpleNamespace(
+                id=ObjectId(),
+                organization=(
+                    self.organization
+                ),
+                transfer_number=(
+                    "TRF-TEST000001"
+                ),
+                source_account=(
+                    self.bank_account
+                ),
+                destination_account=(
+                    self.destination_bank_account
+                ),
+                transfer_date=now,
+                amount=Decimal(
+                    "100.00"
+                ),
+                status="DRAFT",
+                reference="TRANSFER-001",
+                notes=(
+                    "Move funds to secondary bank."
+                ),
+                created_by=self.user,
+                posted_at=None,
+                cancelled_at=None,
+                created_at=now,
+                updated_at=now,
+            )
+        )
 
         self.organization_context = {
             "user":
@@ -421,6 +581,111 @@ class FinanceAPIV1RegressionTestCase(
         return (
             "/api/v1/general-ledger/"
             f"{account.id}/"
+        )
+
+    def bank_account_detail_url(
+        self,
+        bank_account=None,
+    ):
+        bank_account = (
+            bank_account
+            or
+            self.bank_account
+        )
+
+        return (
+            f"{self.BANK_ACCOUNTS_URL}"
+            f"{bank_account.id}/"
+        )
+
+    def bank_account_deactivate_url(
+        self,
+        bank_account=None,
+    ):
+        bank_account = (
+            bank_account
+            or
+            self.bank_account
+        )
+
+        return (
+            f"{self.BANK_ACCOUNTS_URL}"
+            f"{bank_account.id}/deactivate/"
+        )
+
+    def bank_transaction_detail_url(
+        self,
+        transaction=None,
+    ):
+        transaction = (
+            transaction
+            or
+            self.bank_transaction
+        )
+
+        return (
+            f"{self.BANK_TRANSACTIONS_URL}"
+            f"{transaction.id}/"
+        )
+
+    def bank_transaction_reconcile_url(
+        self,
+        transaction=None,
+    ):
+        transaction = (
+            transaction
+            or
+            self.bank_transaction
+        )
+
+        return (
+            f"{self.BANK_TRANSACTIONS_URL}"
+            f"{transaction.id}/reconcile/"
+        )
+
+    def bank_transfer_detail_url(
+        self,
+        transfer=None,
+    ):
+        transfer = (
+            transfer
+            or
+            self.bank_transfer
+        )
+
+        return (
+            f"{self.BANK_TRANSFERS_URL}"
+            f"{transfer.id}/"
+        )
+
+    def bank_transfer_post_url(
+        self,
+        transfer=None,
+    ):
+        transfer = (
+            transfer
+            or
+            self.bank_transfer
+        )
+
+        return (
+            f"{self.BANK_TRANSFERS_URL}"
+            f"{transfer.id}/post/"
+        )
+
+    def bank_transfer_cancel_url(
+        self,
+        transfer=None,
+    ):
+        transfer = (
+            transfer
+            or
+            self.bank_transfer
+        )
+
+        return (
+            f"{self.BANK_TRANSFERS_URL}"
+            f"{transfer.id}/cancel/"
         )
 
     def assert_success_contract(
@@ -1975,6 +2240,1042 @@ class FinanceAPIV1RegressionTestCase(
     ):
         response = self.client.post(
             self.TRIAL_BALANCE_URL
+        )
+
+        self.assert_error_contract(
+            response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+    # ==================================================
+    # BANK ACCOUNT API
+    # ==================================================
+
+    def test_bank_account_collection_returns_data(
+        self,
+    ):
+        pipeline_result = {
+            "items": [
+                self.bank_account,
+            ],
+            "pagination": {
+                "page": 1,
+                "page_size": 25,
+                "total_items": 1,
+                "total_pages": 1,
+                "has_next": False,
+                "has_previous": False,
+            },
+            "query": {
+                "filters": {},
+                "search": None,
+                "sort": [
+                    "account_name",
+                    "id",
+                ],
+            },
+        }
+
+        with (
+            patch.object(
+                BankAccountRepository,
+                "queryset_for_organization",
+                return_value=object(),
+            ),
+            patch.object(
+                APIQueryPipelineService,
+                "execute",
+                return_value=pipeline_result,
+            ),
+        ):
+            response = self.client.get(
+                self.BANK_ACCOUNTS_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        accounts = body["data"][
+            "bank_accounts"
+        ]
+
+        self.assertEqual(
+            len(
+                accounts
+            ),
+            1,
+        )
+
+        self.assertEqual(
+            accounts[0][
+                "account_name"
+            ],
+            "Operating Bank",
+        )
+
+        self.assertEqual(
+            accounts[0][
+                "current_balance"
+            ],
+            "1250.00",
+        )
+
+    def test_bank_account_create_returns_201(
+        self,
+    ):
+        payload = {
+            "account_name":
+                "Operating Bank",
+            "account_type":
+                "BANK",
+            "bank_name":
+                "Example Bank",
+            "account_number":
+                "1234567890",
+            "ifsc_code":
+                "EXAM0001234",
+            "currency":
+                "INR",
+            "opening_balance":
+                "1000.00",
+        }
+
+        with patch.object(
+            BankAccountAPIService,
+            "create_bank_account",
+            return_value=(
+                self.bank_account
+            ),
+        ) as create_mock:
+            response = self.client.post(
+                self.BANK_ACCOUNTS_URL,
+                data=json.dumps(
+                    payload
+                ),
+                content_type=(
+                    "application/json"
+                ),
+            )
+
+        body = self.assert_success_contract(
+            response,
+            expected_status=201,
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_account"
+            ]["account_type"],
+            "BANK",
+        )
+
+        create_mock.assert_called_once_with(
+            user=self.user,
+            organization=(
+                self.organization
+            ),
+            payload=payload,
+        )
+
+    def test_bank_account_detail_returns_data(
+        self,
+    ):
+        with patch.object(
+            BankAccountAPIService,
+            "get_bank_account",
+            return_value=(
+                self.bank_account
+            ),
+        ):
+            response = self.client.get(
+                self.bank_account_detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_account"
+            ]["account_number"],
+            "1234567890",
+        )
+
+    def test_bank_account_patch_updates_data(
+        self,
+    ):
+        payload = {
+            "account_name":
+                "Updated Operating Bank",
+        }
+
+        updated = (
+            SimpleNamespace(
+                **{
+                    **vars(
+                        self.bank_account
+                    ),
+                    "account_name": (
+                        "Updated Operating Bank"
+                    ),
+                }
+            )
+        )
+
+        with patch.object(
+            BankAccountAPIService,
+            "update_bank_account",
+            return_value=updated,
+        ) as update_mock:
+            response = self.client.patch(
+                self.bank_account_detail_url(),
+                data=json.dumps(
+                    payload
+                ),
+                content_type=(
+                    "application/json"
+                ),
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_account"
+            ]["account_name"],
+            "Updated Operating Bank",
+        )
+
+        update_mock.assert_called_once_with(
+            user=self.user,
+            organization=(
+                self.organization
+            ),
+            bank_account_id=str(
+                self.bank_account.id
+            ),
+            payload=payload,
+        )
+
+    def test_bank_account_deactivate_returns_data(
+        self,
+    ):
+        inactive = (
+            SimpleNamespace(
+                **{
+                    **vars(
+                        self.bank_account
+                    ),
+                    "is_active":
+                        False,
+                }
+            )
+        )
+
+        with patch.object(
+            BankAccountAPIService,
+            "deactivate_bank_account",
+            return_value=inactive,
+        ):
+            response = self.client.post(
+                self.bank_account_deactivate_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertFalse(
+            body["data"][
+                "bank_account"
+            ]["is_active"]
+        )
+
+    def test_bank_account_rejects_cash_bank_details(
+        self,
+    ):
+        with self.assertRaises(
+            BankAccountAPIValidationError
+        ) as context:
+            (
+                BankAccountAPIService
+                .validate_create_payload(
+                    {
+                        "account_name":
+                            "Petty Cash",
+                        "account_type":
+                            "CASH",
+                        "bank_name":
+                            "Not Allowed",
+                    }
+                )
+            )
+
+        self.assertIn(
+            "account_type",
+            context.exception.details,
+        )
+
+    def test_bank_account_invalid_id_returns_400(
+        self,
+    ):
+        response = self.client.get(
+            (
+                f"{self.BANK_ACCOUNTS_URL}"
+                "invalid-id/"
+            )
+        )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_bank_account_missing_returns_404(
+        self,
+    ):
+        with patch.object(
+            BankAccountRepository,
+            "get_by_id",
+            return_value=None,
+        ):
+            response = self.client.get(
+                (
+                    f"{self.BANK_ACCOUNTS_URL}"
+                    f"{ObjectId()}/"
+                )
+            )
+
+        self.assert_error_contract(
+            response,
+            404,
+            "NOT_FOUND",
+        )
+
+    def test_bank_account_rejects_permission(
+        self,
+    ):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.get(
+                self.BANK_ACCOUNTS_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+    def test_bank_account_collection_rejects_put(
+        self,
+    ):
+        response = self.client.put(
+            self.BANK_ACCOUNTS_URL,
+            data=json.dumps({}),
+            content_type=(
+                "application/json"
+            ),
+        )
+
+        self.assert_error_contract(
+            response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+    # ==================================================
+    # BANK TRANSACTION API
+    # ==================================================
+
+    def test_bank_transaction_collection_returns_data(
+        self,
+    ):
+        pipeline_result = {
+            "items": [
+                self.bank_transaction,
+            ],
+            "pagination": {
+                "page": 1,
+                "page_size": 25,
+                "total_items": 1,
+                "total_pages": 1,
+                "has_next": False,
+                "has_previous": False,
+            },
+            "query": {
+                "filters": {},
+                "search": None,
+                "sort": [
+                    "-transaction_date",
+                    "id",
+                ],
+            },
+        }
+
+        with (
+            patch.object(
+                BankTransactionRepository,
+                "queryset_for_organization",
+                return_value=object(),
+            ),
+            patch.object(
+                APIQueryPipelineService,
+                "execute",
+                return_value=pipeline_result,
+            ),
+        ):
+            response = self.client.get(
+                self.BANK_TRANSACTIONS_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        transactions = body["data"][
+            "bank_transactions"
+        ]
+
+        self.assertEqual(
+            len(
+                transactions
+            ),
+            1,
+        )
+
+        self.assertEqual(
+            transactions[0][
+                "transaction_number"
+            ],
+            "BTX-TEST000001",
+        )
+
+        self.assertEqual(
+            transactions[0][
+                "balance_after"
+            ],
+            "1250.00",
+        )
+
+    def test_bank_transaction_create_returns_201(
+        self,
+    ):
+        payload = {
+            "bank_account_id":
+                str(
+                    self.bank_account.id
+                ),
+            "transaction_type":
+                "MONEY_IN",
+            "transaction_date":
+                "2026-08-31",
+            "amount":
+                "250.00",
+            "external_reference":
+                "UTR-TEST-001",
+            "description":
+                "Customer receipt",
+        }
+
+        with patch.object(
+            BankTransactionAPIService,
+            "create_transaction",
+            return_value=(
+                self.bank_transaction
+            ),
+        ) as create_mock:
+            response = self.client.post(
+                self.BANK_TRANSACTIONS_URL,
+                data=json.dumps(
+                    payload
+                ),
+                content_type=(
+                    "application/json"
+                ),
+            )
+
+        body = self.assert_success_contract(
+            response,
+            expected_status=201,
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_transaction"
+            ]["transaction_type"],
+            "MONEY_IN",
+        )
+
+        create_mock.assert_called_once_with(
+            user=self.user,
+            organization=(
+                self.organization
+            ),
+            payload=payload,
+        )
+
+    def test_bank_transaction_detail_returns_data(
+        self,
+    ):
+        with patch.object(
+            BankTransactionAPIService,
+            "get_transaction",
+            return_value=(
+                self.bank_transaction
+            ),
+        ):
+            response = self.client.get(
+                self.bank_transaction_detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_transaction"
+            ]["amount"],
+            "250.00",
+        )
+
+    def test_bank_transaction_reconcile_returns_data(
+        self,
+    ):
+        reconciled = (
+            SimpleNamespace(
+                **{
+                    **vars(
+                        self.bank_transaction
+                    ),
+                    "reconciliation_status":
+                        "RECONCILED",
+                    "reconciled_at":
+                        datetime.utcnow(),
+                }
+            )
+        )
+
+        with patch.object(
+            BankTransactionAPIService,
+            "reconcile_transaction",
+            return_value=reconciled,
+        ) as reconcile_mock:
+            response = self.client.post(
+                self.bank_transaction_reconcile_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_transaction"
+            ]["reconciliation_status"],
+            "RECONCILED",
+        )
+
+        reconcile_mock.assert_called_once_with(
+            user=self.user,
+            organization=(
+                self.organization
+            ),
+            transaction_id=str(
+                self.bank_transaction.id
+            ),
+        )
+
+    def test_bank_transaction_rejects_system_type(
+        self,
+    ):
+        with self.assertRaises(
+            BankTransactionAPIValidationError
+        ) as context:
+            (
+                BankTransactionAPIService
+                .validate_create_payload(
+                    {
+                        "bank_account_id":
+                            str(
+                                self.bank_account.id
+                            ),
+                        "transaction_type":
+                            "TRANSFER_IN",
+                        "transaction_date":
+                            "2026-08-31",
+                        "amount":
+                            "100.00",
+                    }
+                )
+            )
+
+        self.assertIn(
+            "transaction_type",
+            context.exception.details,
+        )
+
+    def test_bank_transaction_requires_complete_reference(
+        self,
+    ):
+        with self.assertRaises(
+            BankTransactionAPIValidationError
+        ) as context:
+            (
+                BankTransactionAPIService
+                .validate_create_payload(
+                    {
+                        "bank_account_id":
+                            str(
+                                self.bank_account.id
+                            ),
+                        "transaction_type":
+                            "MONEY_OUT",
+                        "transaction_date":
+                            "2026-08-31",
+                        "amount":
+                            "50.00",
+                        "reference_type":
+                            "VENDOR_PAYMENT",
+                    }
+                )
+            )
+
+        self.assertIn(
+            "reference_id",
+            context.exception.details,
+        )
+
+    def test_bank_transaction_state_error_returns_422(
+        self,
+    ):
+        with patch.object(
+            BankTransactionAPIService,
+            "reconcile_transaction",
+            side_effect=(
+                BankTransactionAPIStateError(
+                    message=(
+                        "Bank transaction is "
+                        "already reconciled."
+                    ),
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.bank_transaction_reconcile_url()
+            )
+
+        self.assert_error_contract(
+            response,
+            422,
+            "UNPROCESSABLE_ENTITY",
+        )
+
+    def test_bank_transaction_invalid_id_returns_400(
+        self,
+    ):
+        response = self.client.get(
+            (
+                f"{self.BANK_TRANSACTIONS_URL}"
+                "invalid-id/"
+            )
+        )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_bank_transaction_rejects_permission(
+        self,
+    ):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.get(
+                self.BANK_TRANSACTIONS_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+    def test_bank_transaction_detail_rejects_post(
+        self,
+    ):
+        response = self.client.post(
+            self.bank_transaction_detail_url()
+        )
+
+        self.assert_error_contract(
+            response,
+            405,
+            "METHOD_NOT_ALLOWED",
+        )
+
+    # ==================================================
+    # BANK TRANSFER API
+    # ==================================================
+
+    def test_bank_transfer_collection_returns_data(
+        self,
+    ):
+        pipeline_result = {
+            "items": [
+                self.bank_transfer,
+            ],
+            "pagination": {
+                "page": 1,
+                "page_size": 25,
+                "total_items": 1,
+                "total_pages": 1,
+                "has_next": False,
+                "has_previous": False,
+            },
+            "query": {
+                "filters": {},
+                "search": None,
+                "sort": [
+                    "-transfer_date",
+                    "id",
+                ],
+            },
+        }
+
+        with (
+            patch.object(
+                BankTransferRepository,
+                "queryset_for_organization",
+                return_value=object(),
+            ),
+            patch.object(
+                APIQueryPipelineService,
+                "execute",
+                return_value=pipeline_result,
+            ),
+        ):
+            response = self.client.get(
+                self.BANK_TRANSFERS_URL
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        transfers = body["data"][
+            "bank_transfers"
+        ]
+
+        self.assertEqual(
+            len(
+                transfers
+            ),
+            1,
+        )
+
+        self.assertEqual(
+            transfers[0][
+                "transfer_number"
+            ],
+            "TRF-TEST000001",
+        )
+
+        self.assertEqual(
+            transfers[0][
+                "status"
+            ],
+            "DRAFT",
+        )
+
+    def test_bank_transfer_create_returns_201(
+        self,
+    ):
+        payload = {
+            "source_account_id":
+                str(
+                    self.bank_account.id
+                ),
+            "destination_account_id":
+                str(
+                    self.destination_bank_account.id
+                ),
+            "transfer_date":
+                "2026-08-31",
+            "amount":
+                "100.00",
+            "reference":
+                "TRANSFER-001",
+            "notes":
+                "Move funds.",
+        }
+
+        with patch.object(
+            BankTransferAPIService,
+            "create_transfer",
+            return_value=(
+                self.bank_transfer
+            ),
+        ) as create_mock:
+            response = self.client.post(
+                self.BANK_TRANSFERS_URL,
+                data=json.dumps(
+                    payload
+                ),
+                content_type=(
+                    "application/json"
+                ),
+            )
+
+        body = self.assert_success_contract(
+            response,
+            expected_status=201,
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_transfer"
+            ]["amount"],
+            "100.00",
+        )
+
+        create_mock.assert_called_once_with(
+            user=self.user,
+            organization=(
+                self.organization
+            ),
+            payload=payload,
+        )
+
+    def test_bank_transfer_detail_returns_data(
+        self,
+    ):
+        with patch.object(
+            BankTransferAPIService,
+            "get_transfer",
+            return_value=(
+                self.bank_transfer
+            ),
+        ):
+            response = self.client.get(
+                self.bank_transfer_detail_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_transfer"
+            ]["source_account"][
+                "account_name"
+            ],
+            "Operating Bank",
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_transfer"
+            ]["destination_account"][
+                "account_name"
+            ],
+            "Secondary Bank",
+        )
+
+    def test_bank_transfer_post_returns_data(
+        self,
+    ):
+        posted = (
+            SimpleNamespace(
+                **{
+                    **vars(
+                        self.bank_transfer
+                    ),
+                    "status":
+                        "POSTED",
+                    "posted_at":
+                        datetime.utcnow(),
+                }
+            )
+        )
+
+        with patch.object(
+            BankTransferAPIService,
+            "post_transfer",
+            return_value=posted,
+        ) as post_mock:
+            response = self.client.post(
+                self.bank_transfer_post_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_transfer"
+            ]["status"],
+            "POSTED",
+        )
+
+        post_mock.assert_called_once_with(
+            user=self.user,
+            organization=(
+                self.organization
+            ),
+            transfer_id=str(
+                self.bank_transfer.id
+            ),
+        )
+
+    def test_bank_transfer_cancel_returns_data(
+        self,
+    ):
+        cancelled = (
+            SimpleNamespace(
+                **{
+                    **vars(
+                        self.bank_transfer
+                    ),
+                    "status":
+                        "CANCELLED",
+                    "cancelled_at":
+                        datetime.utcnow(),
+                }
+            )
+        )
+
+        with patch.object(
+            BankTransferAPIService,
+            "cancel_transfer",
+            return_value=cancelled,
+        ):
+            response = self.client.post(
+                self.bank_transfer_cancel_url()
+            )
+
+        body = self.assert_success_contract(
+            response
+        )
+
+        self.assertEqual(
+            body["data"][
+                "bank_transfer"
+            ]["status"],
+            "CANCELLED",
+        )
+
+    def test_bank_transfer_rejects_same_account(
+        self,
+    ):
+        account_id = str(
+            self.bank_account.id
+        )
+
+        with self.assertRaises(
+            BankTransferAPIValidationError
+        ) as context:
+            (
+                BankTransferAPIService
+                .validate_create_payload(
+                    {
+                        "source_account_id":
+                            account_id,
+                        "destination_account_id":
+                            account_id,
+                        "transfer_date":
+                            "2026-08-31",
+                        "amount":
+                            "100.00",
+                    }
+                )
+            )
+
+        self.assertIn(
+            "destination_account_id",
+            context.exception.details,
+        )
+
+    def test_bank_transfer_post_state_error_returns_422(
+        self,
+    ):
+        with patch.object(
+            BankTransferAPIService,
+            "post_transfer",
+            side_effect=(
+                BankTransferAPIStateError(
+                    message=(
+                        "Only draft bank transfers "
+                        "can be posted."
+                    ),
+                )
+            ),
+        ):
+            response = self.client.post(
+                self.bank_transfer_post_url()
+            )
+
+        self.assert_error_contract(
+            response,
+            422,
+            "UNPROCESSABLE_ENTITY",
+        )
+
+    def test_bank_transfer_invalid_id_returns_400(
+        self,
+    ):
+        response = self.client.get(
+            (
+                f"{self.BANK_TRANSFERS_URL}"
+                "invalid-id/"
+            )
+        )
+
+        self.assert_error_contract(
+            response,
+            400,
+            "VALIDATION_ERROR",
+        )
+
+    def test_bank_transfer_rejects_permission(
+        self,
+    ):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.get(
+                self.BANK_TRANSFERS_URL
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+    def test_bank_transfer_post_rejects_get(
+        self,
+    ):
+        response = self.client.get(
+            self.bank_transfer_post_url()
         )
 
         self.assert_error_contract(

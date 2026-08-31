@@ -360,6 +360,9 @@ class BankTransferService:
                 .create_transaction(
                     user=user,
                     organization=organization,
+                    permission_code=(
+                        "bank_transfers.post"
+                    ),
                     bank_account=(
                         source_account
                     ),
@@ -395,6 +398,9 @@ class BankTransferService:
                 .create_transaction(
                     user=user,
                     organization=organization,
+                    permission_code=(
+                        "bank_transfers.post"
+                    ),
                     bank_account=(
                         destination_account
                     ),

@@ -521,3 +521,416 @@ class TrialBalanceAPISerializer:
                     ]
                 ),
         }
+
+class BankAccountAPISerializer:
+
+    @staticmethod
+    def _serialize_created_by(
+        user,
+    ):
+        if not user:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    user.id
+                )
+            ),
+            "email":
+                user.email,
+            "first_name":
+                user.first_name,
+            "last_name":
+                user.last_name,
+        }
+
+    @staticmethod
+    def serialize_summary(
+        bank_account,
+    ):
+        if not bank_account:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    bank_account.id
+                )
+            ),
+            "account_name":
+                bank_account.account_name,
+            "account_type":
+                bank_account.account_type,
+            "bank_name":
+                (
+                    bank_account.bank_name
+                    or
+                    None
+                ),
+            "account_number":
+                (
+                    bank_account.account_number
+                    or
+                    None
+                ),
+            "ifsc_code":
+                (
+                    bank_account.ifsc_code
+                    or
+                    None
+                ),
+            "currency":
+                bank_account.currency,
+            "opening_balance":
+                str(
+                    bank_account.opening_balance
+                ),
+            "current_balance":
+                str(
+                    bank_account.current_balance
+                ),
+            "is_active":
+                bool(
+                    bank_account.is_active
+                ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        bank_account,
+    ):
+        if not bank_account:
+            return None
+
+        summary = (
+            BankAccountAPISerializer
+            .serialize_summary(
+                bank_account
+            )
+        )
+
+        return {
+            **summary,
+            "created_by": (
+                BankAccountAPISerializer
+                ._serialize_created_by(
+                    bank_account.created_by
+                )
+            ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    bank_account.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    bank_account.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        bank_accounts,
+    ):
+        return [
+            (
+                BankAccountAPISerializer
+                .serialize_summary(
+                    bank_account
+                )
+            )
+            for bank_account
+            in bank_accounts
+        ]
+
+class BankTransactionAPISerializer:
+
+    @staticmethod
+    def _serialize_created_by(
+        user,
+    ):
+        if not user:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    user.id
+                )
+            ),
+            "email":
+                user.email,
+            "first_name":
+                user.first_name,
+            "last_name":
+                user.last_name,
+        }
+
+    @staticmethod
+    def serialize_summary(
+        transaction,
+    ):
+        if not transaction:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    transaction.id
+                )
+            ),
+            "bank_account": (
+                BankAccountAPISerializer
+                .serialize_summary(
+                    transaction.bank_account
+                )
+            ),
+            "transaction_number":
+                transaction.transaction_number,
+            "transaction_type":
+                transaction.transaction_type,
+            "transaction_date": (
+                APISerializationService
+                .serialize_datetime(
+                    transaction.transaction_date
+                )
+            ),
+            "amount":
+                str(
+                    transaction.amount
+                ),
+            "balance_before":
+                str(
+                    transaction.balance_before
+                ),
+            "balance_after":
+                str(
+                    transaction.balance_after
+                ),
+            "external_reference":
+                (
+                    transaction.external_reference
+                    or
+                    None
+                ),
+            "description":
+                (
+                    transaction.description
+                    or
+                    None
+                ),
+            "reconciliation_status":
+                transaction.reconciliation_status,
+            "reconciled_at": (
+                APISerializationService
+                .serialize_datetime(
+                    transaction.reconciled_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        transaction,
+    ):
+        if not transaction:
+            return None
+
+        summary = (
+            BankTransactionAPISerializer
+            .serialize_summary(
+                transaction
+            )
+        )
+
+        return {
+            **summary,
+            "reference_type":
+                (
+                    transaction.reference_type
+                    or
+                    None
+                ),
+            "reference_id":
+                (
+                    transaction.reference_id
+                    or
+                    None
+                ),
+            "created_by": (
+                BankTransactionAPISerializer
+                ._serialize_created_by(
+                    transaction.created_by
+                )
+            ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    transaction.created_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        transactions,
+    ):
+        return [
+            (
+                BankTransactionAPISerializer
+                .serialize_summary(
+                    transaction
+                )
+            )
+            for transaction
+            in transactions
+        ]
+
+class BankTransferAPISerializer:
+
+    @staticmethod
+    def _serialize_created_by(
+        user,
+    ):
+        if not user:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    user.id
+                )
+            ),
+            "email":
+                user.email,
+            "first_name":
+                user.first_name,
+            "last_name":
+                user.last_name,
+        }
+
+    @staticmethod
+    def serialize_summary(
+        transfer,
+    ):
+        if not transfer:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    transfer.id
+                )
+            ),
+            "transfer_number":
+                transfer.transfer_number,
+            "source_account": (
+                BankAccountAPISerializer
+                .serialize_summary(
+                    transfer.source_account
+                )
+            ),
+            "destination_account": (
+                BankAccountAPISerializer
+                .serialize_summary(
+                    transfer.destination_account
+                )
+            ),
+            "transfer_date": (
+                APISerializationService
+                .serialize_datetime(
+                    transfer.transfer_date
+                )
+            ),
+            "amount":
+                str(
+                    transfer.amount
+                ),
+            "status":
+                transfer.status,
+            "reference":
+                (
+                    transfer.reference
+                    or
+                    None
+                ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    transfer.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    transfer.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        transfer,
+    ):
+        if not transfer:
+            return None
+
+        summary = (
+            BankTransferAPISerializer
+            .serialize_summary(
+                transfer
+            )
+        )
+
+        return {
+            **summary,
+            "notes":
+                (
+                    transfer.notes
+                    or
+                    None
+                ),
+            "posted_at": (
+                APISerializationService
+                .serialize_datetime(
+                    transfer.posted_at
+                )
+            ),
+            "cancelled_at": (
+                APISerializationService
+                .serialize_datetime(
+                    transfer.cancelled_at
+                )
+            ),
+            "created_by": (
+                BankTransferAPISerializer
+                ._serialize_created_by(
+                    transfer.created_by
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        transfers,
+    ):
+        return [
+            (
+                BankTransferAPISerializer
+                .serialize_summary(
+                    transfer
+                )
+            )
+            for transfer
+            in transfers
+        ]

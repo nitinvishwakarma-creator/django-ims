@@ -251,3 +251,12 @@ class BankTransactionRepository:
             "transaction_date",
             "created_at",
         ).first()
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return BankTransaction.objects(
+            organization=organization,
+        )

@@ -114,10 +114,21 @@ class BankTransactionService:
         reference_id="",
         external_reference="",
         description="",
+        permission_code=(
+            "bank_transactions.create"
+        ),
     ):
+        if permission_code not in {
+            "bank_transactions.create",
+            "bank_transfers.post",
+        }:
+            raise ValueError(
+                "Invalid transaction permission."
+            )
+
         BankTransactionService._check_permission(
             user,
-            "bank_transactions.create",
+            permission_code,
         )
 
         BankTransactionService._check_organization(

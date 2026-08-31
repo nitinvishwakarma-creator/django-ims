@@ -2574,6 +2574,342 @@ class APIDiscoveryService:
         }
 
     @staticmethod
+    def get_bank_account_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/bank-accounts/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "bank_accounts.read",
+                    "POST":
+                        "bank_accounts.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "account_type":
+                        "string",
+                    "currency":
+                        "string",
+                    "is_active":
+                        "boolean",
+                },
+                "create_fields": [
+                    "account_name",
+                    "account_type",
+                    "bank_name",
+                    "account_number",
+                    "ifsc_code",
+                    "currency",
+                    "opening_balance",
+                ],
+                "required_create_fields": [
+                    "account_name",
+                    "account_type",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                    "PATCH",
+                ],
+                "path": (
+                    "/api/v1/bank-accounts/"
+                    "{bank_account_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "bank_accounts.read",
+                    "PATCH":
+                        "bank_accounts.update",
+                },
+                "editable_fields": [
+                    "account_name",
+                    "bank_name",
+                    "account_number",
+                    "ifsc_code",
+                ],
+                "protected_fields": [
+                    "account_type",
+                    "currency",
+                    "opening_balance",
+                    "current_balance",
+                    "is_active",
+                ],
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "deactivate": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-accounts/"
+                    "{bank_account_id}/deactivate/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_accounts.deactivate",
+                "hard_delete":
+                    False,
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_bank_transaction_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-transactions/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "bank_transactions.read",
+                    "POST":
+                        "bank_transactions.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "bank_account_id":
+                        "object_id",
+                    "transaction_type":
+                        "string",
+                    "reconciliation_status":
+                        "string",
+                },
+                "create_fields": [
+                    "bank_account_id",
+                    "transaction_type",
+                    "transaction_date",
+                    "amount",
+                    "reference_type",
+                    "reference_id",
+                    "external_reference",
+                    "description",
+                ],
+                "required_create_fields": [
+                    "bank_account_id",
+                    "transaction_type",
+                    "transaction_date",
+                    "amount",
+                ],
+                "manual_transaction_types": [
+                    "MONEY_IN",
+                    "MONEY_OUT",
+                    "BANK_CHARGE",
+                    "INTEREST",
+                    "OTHER_IN",
+                    "OTHER_OUT",
+                ],
+                "system_transaction_types": [
+                    "OPENING_BALANCE",
+                    "TRANSFER_IN",
+                    "TRANSFER_OUT",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/bank-transactions/"
+                    "{transaction_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_transactions.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "reconcile": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-transactions/"
+                    "{transaction_id}/reconcile/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_transactions.reconcile",
+                "from_statuses": [
+                    "UNRECONCILED",
+                ],
+                "to_status":
+                    "RECONCILED",
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
+    def get_bank_transfer_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/bank-transfers/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "bank_transfers.read",
+                    "POST":
+                        "bank_transfers.create",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "source_account_id":
+                        "object_id",
+                    "destination_account_id":
+                        "object_id",
+                    "status":
+                        "string",
+                },
+                "create_fields": [
+                    "source_account_id",
+                    "destination_account_id",
+                    "transfer_date",
+                    "amount",
+                    "reference",
+                    "notes",
+                ],
+                "required_create_fields": [
+                    "source_account_id",
+                    "destination_account_id",
+                    "transfer_date",
+                    "amount",
+                ],
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/bank-transfers/"
+                    "{transfer_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_transfers.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "post": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-transfers/"
+                    "{transfer_id}/post/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_transfers.post",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "effects": [
+                    "source_balance_reduction",
+                    "destination_balance_increase",
+                    "transfer_out_transaction",
+                    "transfer_in_transaction",
+                ],
+                "status":
+                    "available",
+            },
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-transfers/"
+                    "{transfer_id}/cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_transfers.cancel",
+                "from_statuses": [
+                    "DRAFT",
+                ],
+                "status":
+                    "available",
+            },
+        }
+
+    @staticmethod
     def get_warehouse_endpoints():
         return {
             "collection": {
@@ -3046,6 +3382,21 @@ class APIDiscoveryService:
                 "trial_balance": (
                     APIDiscoveryService
                     .get_trial_balance_endpoints()
+                ),
+
+                "bank_accounts": (
+                    APIDiscoveryService
+                    .get_bank_account_endpoints()
+                ),
+
+                "bank_transactions": (
+                    APIDiscoveryService
+                    .get_bank_transaction_endpoints()
+                ),
+
+                "bank_transfers": (
+                    APIDiscoveryService
+                    .get_bank_transfer_endpoints()
                 ),
 
                 "warehouses":

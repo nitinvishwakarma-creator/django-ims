@@ -1,0 +1,211 @@
+import type {
+  APIPagination,
+  APIQueryMetadata,
+} from "@/lib/api/types";
+
+export type BankAccountType =
+  | "BANK"
+  | "CASH";
+
+export type BankTransactionType =
+  | "OPENING_BALANCE"
+  | "MONEY_IN"
+  | "MONEY_OUT"
+  | "TRANSFER_IN"
+  | "TRANSFER_OUT"
+  | "BANK_CHARGE"
+  | "INTEREST"
+  | "OTHER_IN"
+  | "OTHER_OUT";
+
+export type ManualBankTransactionType =
+  | "MONEY_IN"
+  | "MONEY_OUT"
+  | "BANK_CHARGE"
+  | "INTEREST"
+  | "OTHER_IN"
+  | "OTHER_OUT";
+
+export type ReconciliationStatus =
+  | "UNRECONCILED"
+  | "RECONCILED";
+
+export type BankTransferStatus =
+  | "DRAFT"
+  | "POSTED"
+  | "CANCELLED";
+
+export interface BankingCreator {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface BankAccountSummary {
+  id: string;
+  account_name: string;
+  account_type: BankAccountType;
+  bank_name: string | null;
+  account_number: string | null;
+  ifsc_code: string | null;
+  currency: string;
+  opening_balance: string;
+  current_balance: string;
+  is_active: boolean;
+}
+
+export interface BankAccountDetail
+  extends BankAccountSummary {
+  created_by: BankingCreator | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BankAccountListParameters {
+  page?: number;
+  page_size?: number;
+  account_type?: BankAccountType | "";
+  currency?: string;
+  is_active?: boolean;
+  search?: string;
+  sort?: string;
+}
+
+export interface BankAccountListData {
+  bank_accounts: BankAccountSummary[];
+  pagination: APIPagination;
+  query: APIQueryMetadata;
+}
+
+export interface BankAccountData {
+  bank_account: BankAccountDetail;
+}
+
+export interface CreateBankAccountInput {
+  account_name: string;
+  account_type: BankAccountType;
+  bank_name?: string;
+  account_number?: string;
+  ifsc_code?: string;
+  currency?: string;
+  opening_balance?: string;
+}
+
+export interface UpdateBankAccountInput {
+  account_name?: string;
+  bank_name?: string;
+  account_number?: string;
+  ifsc_code?: string;
+}
+
+export interface BankTransactionSummary {
+  id: string;
+  bank_account: BankAccountSummary;
+  transaction_number: string;
+  transaction_type: BankTransactionType;
+  transaction_date: string;
+  amount: string;
+  balance_before: string;
+  balance_after: string;
+  external_reference: string | null;
+  description: string | null;
+  reconciliation_status:
+    ReconciliationStatus;
+  reconciled_at: string | null;
+}
+
+export interface BankTransactionDetail
+  extends BankTransactionSummary {
+  reference_type: string | null;
+  reference_id: string | null;
+  created_by: BankingCreator | null;
+  created_at: string;
+}
+
+export interface BankTransactionListParameters {
+  page?: number;
+  page_size?: number;
+  bank_account_id?: string;
+  transaction_type?:
+    BankTransactionType | "";
+  reconciliation_status?:
+    ReconciliationStatus | "";
+  search?: string;
+  sort?: string;
+}
+
+export interface BankTransactionListData {
+  bank_transactions:
+    BankTransactionSummary[];
+  pagination: APIPagination;
+  query: APIQueryMetadata;
+}
+
+export interface BankTransactionData {
+  bank_transaction:
+    BankTransactionDetail;
+}
+
+export interface CreateBankTransactionInput {
+  bank_account_id: string;
+  transaction_type:
+    ManualBankTransactionType;
+  transaction_date: string;
+  amount: string;
+  reference_type?: string;
+  reference_id?: string;
+  external_reference?: string;
+  description?: string;
+}
+
+export interface BankTransferSummary {
+  id: string;
+  transfer_number: string;
+  source_account: BankAccountSummary;
+  destination_account:
+    BankAccountSummary;
+  transfer_date: string;
+  amount: string;
+  status: BankTransferStatus;
+  reference: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BankTransferDetail
+  extends BankTransferSummary {
+  notes: string | null;
+  posted_at: string | null;
+  cancelled_at: string | null;
+  created_by: BankingCreator | null;
+}
+
+export interface BankTransferListParameters {
+  page?: number;
+  page_size?: number;
+  source_account_id?: string;
+  destination_account_id?: string;
+  status?: BankTransferStatus | "";
+  search?: string;
+  sort?: string;
+}
+
+export interface BankTransferListData {
+  bank_transfers: BankTransferSummary[];
+  pagination: APIPagination;
+  query: APIQueryMetadata;
+}
+
+export interface BankTransferData {
+  bank_transfer: BankTransferDetail;
+}
+
+export interface CreateBankTransferInput {
+  source_account_id: string;
+  destination_account_id: string;
+  transfer_date: string;
+  amount: string;
+  reference?: string;
+  notes?: string;
+}

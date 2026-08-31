@@ -5,17 +5,24 @@ import {
 } from "@tanstack/react-query";
 
 import {
+  autoMatchStatementLine,
+  cancelBankStatement,
   cancelBankTransfer,
   createBankAccount,
   createBankTransaction,
   createBankTransfer,
   deactivateBankAccount,
   getBankAccount,
+  getBankStatement,
   getBankTransaction,
   getBankTransfer,
+  ignoreStatementLine,
+  importBankStatement,
   listBankAccounts,
+  listBankStatements,
   listBankTransactions,
   listBankTransfers,
+  matchStatementLine,
   postBankTransfer,
   reconcileBankTransaction,
   updateBankAccount,
@@ -26,12 +33,17 @@ import {
 } from "@/features/banking/query-keys";
 
 import type {
+  AutoMatchStatementLineInput,
   BankAccountListParameters,
+  BankStatementListParameters,
   BankTransactionListParameters,
   BankTransferListParameters,
   CreateBankAccountInput,
   CreateBankTransactionInput,
   CreateBankTransferInput,
+  IgnoreStatementLineInput,
+  ImportBankStatementInput,
+  MatchStatementLineInput,
   UpdateBankAccountInput,
 } from "@/features/banking/types";
 
@@ -486,6 +498,236 @@ export function useCancelBankTransfer() {
             bankingQueryKeys
             .transferLists(),
         });
+    },
+  });
+}
+export function useBankStatementList(
+  parameters:
+    BankStatementListParameters,
+) {
+  return useQuery({
+    queryKey:
+      bankingQueryKeys
+      .statementList(
+        parameters,
+      ),
+
+    queryFn: () =>
+      listBankStatements(
+        parameters,
+      ),
+
+    staleTime: 15_000,
+  });
+}
+
+export function useBankStatement(
+  statementId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey:
+      bankingQueryKeys
+      .statementDetail(
+        statementId,
+      ),
+
+    queryFn: () =>
+      getBankStatement(
+        statementId,
+      ),
+
+    enabled:
+      enabled
+      &&
+      Boolean(
+        statementId,
+      ),
+
+    staleTime: 15_000,
+  });
+}
+
+export function useImportBankStatement() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      input:
+        ImportBankStatementInput,
+    ) =>
+      importBankStatement(
+        input,
+      ),
+
+    onSuccess: async (
+      statement,
+    ) => {
+      queryClient.setQueryData(
+        bankingQueryKeys
+          .statementDetail(
+            statement.id,
+          ),
+        statement,
+      );
+
+      await queryClient
+        .invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementLists(),
+        });
+    },
+  });
+}
+
+export function useCancelBankStatement() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      statementId: string,
+    ) =>
+      cancelBankStatement(
+        statementId,
+      ),
+
+    onSuccess: async (
+      statement,
+    ) => {
+      queryClient.setQueryData(
+        bankingQueryKeys
+          .statementDetail(
+            statement.id,
+          ),
+        statement,
+      );
+
+      await queryClient
+        .invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementLists(),
+        });
+    },
+  });
+}
+
+export function useAutoMatchStatementLine() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      input:
+        AutoMatchStatementLineInput,
+    ) =>
+      autoMatchStatementLine(
+        input,
+      ),
+
+    onSuccess: async (
+      result,
+    ) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementDetail(
+              result.statement.id,
+            ),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementLists(),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .transactionLists(),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useMatchStatementLine() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      input:
+        MatchStatementLineInput,
+    ) =>
+      matchStatementLine(
+        input,
+      ),
+
+    onSuccess: async (
+      result,
+    ) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementDetail(
+              result.statement.id,
+            ),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementLists(),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .transactionLists(),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useIgnoreStatementLine() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      input:
+        IgnoreStatementLineInput,
+    ) =>
+      ignoreStatementLine(
+        input,
+      ),
+
+    onSuccess: async (
+      result,
+    ) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementDetail(
+              result.statement.id,
+            ),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementLists(),
+        }),
+      ]);
     },
   });
 }

@@ -3,10 +3,17 @@ import {
 } from "@/lib/api/client";
 
 import type {
+  AutoMatchStatementLineInput,
   BankAccountData,
   BankAccountDetail,
   BankAccountListData,
   BankAccountListParameters,
+  BankStatementAutoMatchData,
+  BankStatementData,
+  BankStatementDetail,
+  BankStatementLineActionData,
+  BankStatementListData,
+  BankStatementListParameters,
   BankTransactionData,
   BankTransactionDetail,
   BankTransactionListData,
@@ -18,6 +25,9 @@ import type {
   CreateBankAccountInput,
   CreateBankTransactionInput,
   CreateBankTransferInput,
+  IgnoreStatementLineInput,
+  ImportBankStatementInput,
+  MatchStatementLineInput,
   UpdateBankAccountInput,
 } from "@/features/banking/types";
 
@@ -395,4 +405,205 @@ export async function cancelBankTransfer(
   return response
     .data
     .bank_transfer;
+}
+export async function listBankStatements(
+  parameters:
+    BankStatementListParameters = {},
+): Promise<BankStatementListData> {
+  const response =
+    await apiRequest<
+      BankStatementListData
+    >(
+      (
+        "/bank-statements/"
+        +
+        buildQuery({
+          page:
+            parameters.page,
+          page_size:
+            parameters.page_size,
+          bank_account_id:
+            parameters.bank_account_id,
+          status:
+            parameters.status,
+          source_type:
+            parameters.source_type,
+          search:
+            parameters.search,
+          sort:
+            parameters.sort,
+        })
+      ),
+    );
+
+  return response.data;
+}
+
+export async function getBankStatement(
+  statementId: string,
+): Promise<BankStatementDetail> {
+  const response =
+    await apiRequest<
+      BankStatementData
+    >(
+      (
+        "/bank-statements/"
+        +
+        `${statementId}/`
+      ),
+    );
+
+  return response
+    .data
+    .bank_statement;
+}
+
+export async function importBankStatement(
+  input: ImportBankStatementInput,
+): Promise<BankStatementDetail> {
+  const formData =
+    new FormData();
+
+  formData.append(
+    "file",
+    input.file,
+  );
+
+  formData.append(
+    "bank_account_id",
+    input.bank_account_id,
+  );
+
+  formData.append(
+    "statement_start_date",
+    input.statement_start_date,
+  );
+
+  formData.append(
+    "statement_end_date",
+    input.statement_end_date,
+  );
+
+  formData.append(
+    "opening_balance",
+    input.opening_balance,
+  );
+
+  formData.append(
+    "closing_balance",
+    input.closing_balance,
+  );
+
+  const response =
+    await apiRequest<
+      BankStatementData
+    >(
+      "/bank-statements/",
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+
+  return response
+    .data
+    .bank_statement;
+}
+
+export async function cancelBankStatement(
+  statementId: string,
+): Promise<BankStatementDetail> {
+  const response =
+    await apiRequest<
+      BankStatementData
+    >(
+      (
+        "/bank-statements/"
+        +
+        `${statementId}/cancel/`
+      ),
+      {
+        method: "POST",
+      },
+    );
+
+  return response
+    .data
+    .bank_statement;
+}
+
+export async function autoMatchStatementLine(
+  input: AutoMatchStatementLineInput,
+): Promise<BankStatementAutoMatchData> {
+  const response =
+    await apiRequest<
+      BankStatementAutoMatchData
+    >(
+      (
+        "/bank-statements/"
+        +
+        `${input.statementId}/lines/`
+        +
+        `${input.lineNumber}/auto-match/`
+      ),
+      {
+        method: "POST",
+        body: {
+          date_tolerance_days:
+            input.dateToleranceDays
+            ??
+            2,
+        },
+      },
+    );
+
+  return response.data;
+}
+
+export async function matchStatementLine(
+  input: MatchStatementLineInput,
+): Promise<BankStatementLineActionData> {
+  const response =
+    await apiRequest<
+      BankStatementLineActionData
+    >(
+      (
+        "/bank-statements/"
+        +
+        `${input.statementId}/lines/`
+        +
+        `${input.lineNumber}/match/`
+      ),
+      {
+        method: "POST",
+        body: {
+          transaction_id:
+            input.transactionId,
+        },
+      },
+    );
+
+  return response.data;
+}
+
+export async function ignoreStatementLine(
+  input: IgnoreStatementLineInput,
+): Promise<BankStatementLineActionData> {
+  const response =
+    await apiRequest<
+      BankStatementLineActionData
+    >(
+      (
+        "/bank-statements/"
+        +
+        `${input.statementId}/lines/`
+        +
+        `${input.lineNumber}/ignore/`
+      ),
+      {
+        method: "POST",
+      },
+    );
+
+  return response.data;
 }

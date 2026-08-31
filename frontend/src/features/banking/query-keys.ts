@@ -1,5 +1,6 @@
 import type {
   BankAccountListParameters,
+  BankStatementListParameters,
   BankTransactionListParameters,
   BankTransferListParameters,
 } from "@/features/banking/types";
@@ -103,5 +104,37 @@ export const bankingQueryKeys = {
     ...bankingQueryKeys
       .transferDetails(),
     transferId,
+  ] as const,
+
+  statements: () => [
+    ...bankingQueryKeys.all,
+    "statements",
+  ] as const,
+
+  statementLists: () => [
+    ...bankingQueryKeys.statements(),
+    "list",
+  ] as const,
+
+  statementList: (
+    parameters:
+      BankStatementListParameters,
+  ) => [
+    ...bankingQueryKeys
+      .statementLists(),
+    parameters,
+  ] as const,
+
+  statementDetails: () => [
+    ...bankingQueryKeys.statements(),
+    "detail",
+  ] as const,
+
+  statementDetail: (
+    statementId: string,
+  ) => [
+    ...bankingQueryKeys
+      .statementDetails(),
+    statementId,
   ] as const,
 };

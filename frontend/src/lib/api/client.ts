@@ -172,14 +172,22 @@ export async function apiRequest<T>(
   let requestBody: BodyInit | undefined;
 
   if (options.body !== undefined) {
-    headers.set(
-      "Content-Type",
-      "application/json",
-    );
+    if (
+      options.body
+      instanceof FormData
+    ) {
+      requestBody =
+        options.body;
+    } else {
+      headers.set(
+        "Content-Type",
+        "application/json",
+      );
 
-    requestBody = JSON.stringify(
-      options.body,
-    );
+      requestBody = JSON.stringify(
+        options.body,
+      );
+    }
   }
 
   if (isUnsafeMethod(method)) {

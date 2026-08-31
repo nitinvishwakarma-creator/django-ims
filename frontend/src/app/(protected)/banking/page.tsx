@@ -12,10 +12,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  FileSpreadsheet,
   Pencil,
   Plus,
   ReceiptText,
   Search,
+  Upload,
 } from "lucide-react";
 
 import {
@@ -24,6 +26,8 @@ import {
 
 import BankAccountDeactivateDialog from "@/features/banking/components/bank-account-deactivate-dialog";
 import BankAccountFormDialog from "@/features/banking/components/bank-account-form-dialog";
+import BankStatementDetailDialog from "@/features/banking/components/bank-statement-detail-dialog";
+import BankStatementImportDialog from "@/features/banking/components/bank-statement-import-dialog";
 import BankTransactionDetailDialog from "@/features/banking/components/bank-transaction-detail-dialog";
 import BankTransactionFormDialog from "@/features/banking/components/bank-transaction-form-dialog";
 import BankTransferDetailDialog from "@/features/banking/components/bank-transfer-detail-dialog";
@@ -31,6 +35,7 @@ import BankTransferFormDialog from "@/features/banking/components/bank-transfer-
 
 import {
   useBankAccountList,
+  useBankStatementList,
   useBankTransactionList,
   useBankTransferList,
 } from "@/features/banking/hooks";
@@ -39,6 +44,8 @@ import type {
   BankAccountDetail,
   BankAccountSummary,
   BankAccountType,
+  BankStatementSourceType,
+  BankStatementStatus,
   BankTransactionType,
   BankTransferStatus,
   ReconciliationStatus,
@@ -57,7 +64,8 @@ const PAGE_SIZE = 25;
 type BankingTab =
   | "accounts"
   | "transactions"
-  | "transfers";
+  | "transfers"
+  | "statements";
 
 function formatAmount(
   value: string,
@@ -83,7 +91,7 @@ function formatDate(
   value: string | null,
 ): string {
   if (!value) {
-    return "—";
+    return "â€”";
   }
 
   const parsed = new Date(value);
@@ -127,7 +135,7 @@ function Pagination({
       <p className="text-sm text-slate-500">
         Page {pagination.page} of{" "}
         {Math.max(pagination.total_pages, 1)}
-        {" • "}
+        {" â€¢ "}
         {pagination.total_items} {noun}
       </p>
 
@@ -198,6 +206,12 @@ export default function BankingPage() {
   const [transferStatus, setTransferStatus] =
     useState<BankTransferStatus | "">("");
 
+  const [statementPage, setStatementPage] = useState(1);
+  const [statementStatus, setStatementStatus] =
+    useState<BankStatementStatus | "">("");
+  const [statementSourceType, setStatementSourceType] =
+    useState<BankStatementSourceType | "">("");
+
   const [accountFormOpen, setAccountFormOpen] = useState(false);
   const [editingAccount, setEditingAccount] =
     useState<BankAccountDetail | null>(null);
@@ -215,6 +229,11 @@ export default function BankingPage() {
   const [transferFormOpen, setTransferFormOpen] =
     useState(false);
   const [transferDetailId, setTransferDetailId] =
+    useState("");
+
+  const [statementImportOpen, setStatementImportOpen] =
+    useState(false);
+  const [statementDetailId, setStatementDetailId] =
     useState("");
 
   const accountQuery = useBankAccountList({
@@ -246,6 +265,15 @@ export default function BankingPage() {
     sort: "-transfer_date,-created_at",
   });
 
+  const statementQuery = useBankStatementList({
+    page: statementPage,
+    page_size: PAGE_SIZE,
+    status: statementStatus || undefined,
+    source_type: statementSourceType || undefined,
+    search: tab === "statements" ? deferredSearch || undefined : undefined,
+    sort: "-statement_end_date,-created_at",
+  });
+
   const canCreateAccount = permissions.includes("bank_accounts.create");
   const canUpdateAccount = permissions.includes("bank_accounts.update");
   const canDeactivateAccount = permissions.includes("bank_accounts.deactivate");
@@ -254,6 +282,9 @@ export default function BankingPage() {
   const canCreateTransfer = permissions.includes("bank_transfers.create");
   const canPostTransfer = permissions.includes("bank_transfers.post");
   const canCancelTransfer = permissions.includes("bank_transfers.cancel");
+  const canCreateStatement = permissions.includes("bank_statements.create");
+  const canReconcileStatement = permissions.includes("bank_statements.reconcile");
+  const canCancelStatement = permissions.includes("bank_statements.cancel");
 
   async function openEditAccount(
     account: BankAccountSummary,
@@ -290,6 +321,7 @@ export default function BankingPage() {
     { value: "accounts", label: "Accounts", icon: Banknote },
     { value: "transactions", label: "Transactions", icon: ReceiptText },
     { value: "transfers", label: "Transfers", icon: ArrowRightLeft },
+    { value: "statements", label: "Statements", icon: FileSpreadsheet },
   ];
 
   return (
@@ -345,6 +377,15 @@ export default function BankingPage() {
               <Plus size={17} />
               New transfer
             </button>
+          ) : tab === "statements" && canCreateStatement ? (
+            <button
+              type="button"
+              onClick={() => setStatementImportOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              <Upload size={17} />
+              Import statement
+            </button>
           ) : null}
         </header>
 
@@ -395,6 +436,7 @@ export default function BankingPage() {
                   setAccountPage(1);
                   setTransactionPage(1);
                   setTransferPage(1);
+                  setStatementPage(1);
                 }}
                 className={`${inputClass} w-full pl-9`}
                 placeholder={`Search ${tab}...`}
@@ -462,7 +504,7 @@ export default function BankingPage() {
                   <option value="RECONCILED">Reconciled</option>
                 </select>
               </>
-            ) : (
+            ) : tab === "transfers" ? (
               <select
                 value={transferStatus}
                 onChange={(event) => {
@@ -476,6 +518,36 @@ export default function BankingPage() {
                 <option value="POSTED">Posted</option>
                 <option value="CANCELLED">Cancelled</option>
               </select>
+            ) : (
+              <>
+                <select
+                  value={statementStatus}
+                  onChange={(event) => {
+                    setStatementStatus(event.target.value as BankStatementStatus | "");
+                    setStatementPage(1);
+                  }}
+                  className={inputClass}
+                >
+                  <option value="">All statuses</option>
+                  <option value="IMPORTED">Imported</option>
+                  <option value="PARTIALLY_RECONCILED">Partially reconciled</option>
+                  <option value="RECONCILED">Reconciled</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+                <select
+                  value={statementSourceType}
+                  onChange={(event) => {
+                    setStatementSourceType(event.target.value as BankStatementSourceType | "");
+                    setStatementPage(1);
+                  }}
+                  className={inputClass}
+                >
+                  <option value="">All sources</option>
+                  <option value="CSV">CSV</option>
+                  <option value="XLSX">XLSX</option>
+                  <option value="MANUAL">Manual</option>
+                </select>
+              </>
             )}
           </div>
 
@@ -511,7 +583,7 @@ export default function BankingPage() {
                             <p className="text-sm font-semibold text-slate-900">{account.account_name}</p>
                             <p className="mt-1 text-xs text-slate-500">
                               {account.bank_name ?? "Cash account"}
-                              {account.account_number ? ` • ${account.account_number}` : ""}
+                              {account.account_number ? ` â€¢ ${account.account_number}` : ""}
                             </p>
                           </td>
                           <td className="px-5 py-4 text-sm text-slate-700">{account.account_type}</td>
@@ -613,7 +685,8 @@ export default function BankingPage() {
                 <Pagination pagination={transactionQuery.data?.pagination} noun="transactions" onPage={setTransactionPage} />
               </>
             )
-          ) : transferQuery.isLoading ? (
+          ) : tab === "transfers" ? (
+            transferQuery.isLoading ? (
             <p className="p-12 text-center text-sm text-slate-500">Loading transfers...</p>
           ) : transferQuery.isError ? (
             <p className="p-12 text-center text-sm text-red-700">{transferQuery.error.message}</p>
@@ -664,6 +737,98 @@ export default function BankingPage() {
               </div>
               <Pagination pagination={transferQuery.data?.pagination} noun="transfers" onPage={setTransferPage} />
             </>
+            )
+          ) : statementQuery.isLoading ? (
+            <p className="p-12 text-center text-sm text-slate-500">Loading bank statements...</p>
+          ) : statementQuery.isError ? (
+            <p className="p-12 text-center text-sm text-red-700">{statementQuery.error.message}</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <th className="px-5 py-3">Statement</th>
+                      <th className="px-5 py-3">Bank account</th>
+                      <th className="px-5 py-3">Period</th>
+                      <th className="px-5 py-3">Closing balance</th>
+                      <th className="px-5 py-3">Progress</th>
+                      <th className="px-5 py-3">Status</th>
+                      <th className="px-5 py-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(statementQuery.data?.bank_statements ?? []).map((statement) => {
+                      const completed = statement.matched_count + statement.ignored_count;
+                      const progress = statement.line_count > 0
+                        ? Math.round((completed / statement.line_count) * 100)
+                        : 0;
+
+                      return (
+                        <tr key={statement.id} className="hover:bg-slate-50/70">
+                          <td className="px-5 py-4">
+                            <p className="text-sm font-semibold text-slate-900">{statement.statement_number}</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {statement.source_type}
+                              {statement.source_filename ? ` · ${statement.source_filename}` : ""}
+                            </p>
+                          </td>
+                          <td className="px-5 py-4 text-sm text-slate-700">
+                            {statement.bank_account.account_name}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-slate-700 whitespace-nowrap">
+                            {formatDate(statement.statement_start_date)}
+                            {" — "}
+                            {formatDate(statement.statement_end_date)}
+                          </td>
+                          <td className="px-5 py-4 text-sm font-semibold text-slate-900 whitespace-nowrap">
+                            {formatAmount(statement.closing_balance, statement.bank_account.currency)}
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="min-w-32">
+                              <div className="flex justify-between text-xs text-slate-500">
+                                <span>{completed}/{statement.line_count}</span>
+                                <span>{progress}%</span>
+                              </div>
+                              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                                <div
+                                  className="h-full rounded-full bg-emerald-500"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              statement.status === "RECONCILED"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : statement.status === "CANCELLED"
+                                  ? "bg-slate-200 text-slate-700"
+                                  : statement.status === "PARTIALLY_RECONCILED"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-amber-100 text-amber-700"
+                            }`}>
+                              {statement.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4">
+                            <button
+                              type="button"
+                              onClick={() => setStatementDetailId(statement.id)}
+                              className="rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50"
+                              aria-label={`View ${statement.statement_number}`}
+                            >
+                              <Eye size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination pagination={statementQuery.data?.pagination} noun="statements" onPage={setStatementPage} />
+            </>
           )}
         </section>
       </div>
@@ -704,6 +869,20 @@ export default function BankingPage() {
         canPost={canPostTransfer}
         canCancel={canCancelTransfer}
         onClose={() => setTransferDetailId("")}
+      />
+      <BankStatementImportDialog
+        open={statementImportOpen}
+        onClose={() => setStatementImportOpen(false)}
+        onImported={(statementId) => {
+          setStatementDetailId(statementId);
+        }}
+      />
+      <BankStatementDetailDialog
+        open={Boolean(statementDetailId)}
+        statementId={statementDetailId}
+        canReconcile={canReconcileStatement}
+        canCancel={canCancelStatement}
+        onClose={() => setStatementDetailId("")}
       />
     </>
   );

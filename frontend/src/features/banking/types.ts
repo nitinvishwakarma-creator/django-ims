@@ -209,3 +209,125 @@ export interface CreateBankTransferInput {
   reference?: string;
   notes?: string;
 }
+export type BankStatementSourceType =
+  | "MANUAL"
+  | "CSV"
+  | "XLSX";
+
+export type BankStatementStatus =
+  | "IMPORTED"
+  | "PARTIALLY_RECONCILED"
+  | "RECONCILED"
+  | "CANCELLED";
+
+export type BankStatementLineMatchStatus =
+  | "UNMATCHED"
+  | "MATCHED"
+  | "IGNORED";
+
+export interface BankStatementLine {
+  line_number: number;
+  transaction_date: string;
+  value_date: string | null;
+  description: string | null;
+  external_reference: string | null;
+  debit_amount: string;
+  credit_amount: string;
+  running_balance: string | null;
+  match_status:
+    BankStatementLineMatchStatus;
+  matched_transaction:
+    BankTransactionSummary | null;
+  matched_at: string | null;
+}
+
+export interface BankStatementSummary {
+  id: string;
+  statement_number: string;
+  bank_account: BankAccountSummary;
+  statement_start_date: string;
+  statement_end_date: string;
+  opening_balance: string;
+  closing_balance: string;
+  source_filename: string | null;
+  source_type:
+    BankStatementSourceType;
+  status: BankStatementStatus;
+  line_count: number;
+  matched_count: number;
+  ignored_count: number;
+  unmatched_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BankStatementDetail
+  extends BankStatementSummary {
+  lines: BankStatementLine[];
+  reconciled_at: string | null;
+  cancelled_at: string | null;
+  created_by: BankingCreator | null;
+}
+
+export interface BankStatementListParameters {
+  page?: number;
+  page_size?: number;
+  bank_account_id?: string;
+  status?: BankStatementStatus | "";
+  source_type?:
+    BankStatementSourceType | "";
+  search?: string;
+  sort?: string;
+}
+
+export interface BankStatementListData {
+  bank_statements:
+    BankStatementSummary[];
+  pagination: APIPagination;
+  query: APIQueryMetadata;
+}
+
+export interface BankStatementData {
+  bank_statement:
+    BankStatementDetail;
+}
+
+export interface ImportBankStatementInput {
+  file: File;
+  bank_account_id: string;
+  statement_start_date: string;
+  statement_end_date: string;
+  opening_balance: string;
+  closing_balance: string;
+}
+
+export interface BankStatementLineActionData {
+  statement: BankStatementSummary;
+  line: BankStatementLine;
+  transaction?:
+    BankTransactionDetail | null;
+}
+
+export interface BankStatementAutoMatchData
+  extends BankStatementLineActionData {
+  matched: boolean;
+  match_type: string | null;
+  candidate_count: number | null;
+}
+
+export interface AutoMatchStatementLineInput {
+  statementId: string;
+  lineNumber: number;
+  dateToleranceDays?: number;
+}
+
+export interface MatchStatementLineInput {
+  statementId: string;
+  lineNumber: number;
+  transactionId: string;
+}
+
+export interface IgnoreStatementLineInput {
+  statementId: string;
+  lineNumber: number;
+}

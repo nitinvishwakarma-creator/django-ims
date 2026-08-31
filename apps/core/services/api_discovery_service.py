@@ -2910,6 +2910,194 @@ class APIDiscoveryService:
         }
 
     @staticmethod
+    def get_bank_statement_endpoints():
+        return {
+            "collection": {
+                "methods": [
+                    "GET",
+                    "POST",
+                ],
+                "path":
+                    "/api/v1/bank-statements/",
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permissions": {
+                    "GET":
+                        "bank_statements.read",
+                    "POST":
+                        "bank_statements.create",
+                },
+                "content_type": {
+                    "POST":
+                        "multipart/form-data",
+                },
+                "query_capabilities": [
+                    "filtering",
+                    "search",
+                    "sorting",
+                    "pagination",
+                ],
+                "filters": {
+                    "bank_account_id":
+                        "object_id",
+                    "status":
+                        "string",
+                    "source_type":
+                        "string",
+                },
+                "import_fields": [
+                    "file",
+                    "bank_account_id",
+                    "statement_start_date",
+                    "statement_end_date",
+                    "opening_balance",
+                    "closing_balance",
+                ],
+                "required_import_fields": [
+                    "file",
+                    "bank_account_id",
+                    "statement_start_date",
+                    "statement_end_date",
+                    "opening_balance",
+                    "closing_balance",
+                ],
+                "supported_file_types": [
+                    "CSV",
+                    "XLSX",
+                ],
+                "maximum_file_size_bytes":
+                    5242880,
+                "status":
+                    "available",
+            },
+            "detail": {
+                "methods": [
+                    "GET",
+                ],
+                "path": (
+                    "/api/v1/bank-statements/"
+                    "{statement_id}/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.read",
+                "cross_tenant_behavior":
+                    "not_found",
+                "status":
+                    "available",
+            },
+            "cancel": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-statements/"
+                    "{statement_id}/cancel/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.cancel",
+                "from_statuses": [
+                    "IMPORTED",
+                    "PARTIALLY_RECONCILED",
+                ],
+                "status":
+                    "available",
+            },
+            "auto_match_line": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-statements/"
+                    "{statement_id}/lines/"
+                    "{line_number}/auto-match/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.reconcile",
+                "from_line_statuses": [
+                    "UNMATCHED",
+                ],
+                "effects": [
+                    "match_candidate_search",
+                    "transaction_reconciliation",
+                    "statement_status_update",
+                ],
+                "status":
+                    "available",
+            },
+            "match_line": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-statements/"
+                    "{statement_id}/lines/"
+                    "{line_number}/match/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.reconcile",
+                "fields": [
+                    "transaction_id",
+                ],
+                "required_fields": [
+                    "transaction_id",
+                ],
+                "from_line_statuses": [
+                    "UNMATCHED",
+                ],
+                "effects": [
+                    "transaction_reconciliation",
+                    "statement_status_update",
+                ],
+                "status":
+                    "available",
+            },
+            "ignore_line": {
+                "methods": [
+                    "POST",
+                ],
+                "path": (
+                    "/api/v1/bank-statements/"
+                    "{statement_id}/lines/"
+                    "{line_number}/ignore/"
+                ),
+                "authentication_required":
+                    True,
+                "tenant_scoped":
+                    True,
+                "permission":
+                    "bank_statements.reconcile",
+                "from_line_statuses": [
+                    "UNMATCHED",
+                ],
+                "effects": [
+                    "line_ignored",
+                    "statement_status_update",
+                ],
+                "status":
+                    "available",
+            },
+        }
+
+
+    @staticmethod
     def get_warehouse_endpoints():
         return {
             "collection": {
@@ -3397,6 +3585,11 @@ class APIDiscoveryService:
                 "bank_transfers": (
                     APIDiscoveryService
                     .get_bank_transfer_endpoints()
+                ),
+
+                "bank_statements": (
+                    APIDiscoveryService
+                    .get_bank_statement_endpoints()
                 ),
 
                 "warehouses":

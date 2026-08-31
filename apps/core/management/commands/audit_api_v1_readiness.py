@@ -1019,6 +1019,66 @@ class Command(
             ),
         )
         check(
+            "Bank Statement collection route available",
+            route_exists(
+                "/api/v1/bank-statements/",
+            ),
+        )
+
+        check(
+            "Bank Statement detail route available",
+            route_exists(
+                (
+                    "/api/v1/bank-statements/"
+                    "audit-statement-id/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Statement cancellation route available",
+            route_exists(
+                (
+                    "/api/v1/bank-statements/"
+                    "audit-statement-id/"
+                    "cancel/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Statement auto-match route available",
+            route_exists(
+                (
+                    "/api/v1/bank-statements/"
+                    "audit-statement-id/lines/"
+                    "1/auto-match/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Statement manual-match route available",
+            route_exists(
+                (
+                    "/api/v1/bank-statements/"
+                    "audit-statement-id/lines/"
+                    "1/match/"
+                ),
+            ),
+        )
+
+        check(
+            "Bank Statement ignore-line route available",
+            route_exists(
+                (
+                    "/api/v1/bank-statements/"
+                    "audit-statement-id/lines/"
+                    "1/ignore/"
+                ),
+            ),
+        )
+        check(
             "Vendor Debit Note detail route available",
             route_exists(
                 (
@@ -1518,6 +1578,14 @@ class Command(
                     {},
                 )
             )
+
+            bank_statement_endpoints = (
+                manifest_endpoints.get(
+                    "bank_statements",
+                    {},
+                )
+            )
+
             warehouse_endpoints = (
                 manifest_endpoints.get(
                     "warehouses",
@@ -2804,6 +2872,103 @@ class Command(
                     )
                     ==
                     "bank_transfers.post"
+                ),
+            )
+            check(
+                (
+                    "Discovery exposes Bank Statement "
+                    "endpoints"
+                ),
+                all(
+                    endpoint_name
+                    in bank_statement_endpoints
+                    for endpoint_name
+                    in (
+                        "collection",
+                        "detail",
+                        "cancel",
+                        "auto_match_line",
+                        "match_line",
+                        "ignore_line",
+                    )
+                ),
+            )
+
+            check(
+                (
+                    "Discovery documents Bank Statement "
+                    "reconciliation"
+                ),
+                (
+                    bank_statement_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "path"
+                    )
+                    ==
+                    "/api/v1/bank-statements/"
+                    and
+                    bank_statement_endpoints
+                    .get(
+                        "collection",
+                        {},
+                    )
+                    .get(
+                        "content_type",
+                        {},
+                    )
+                    .get(
+                        "POST"
+                    )
+                    ==
+                    "multipart/form-data"
+                    and
+                    bank_statement_endpoints
+                    .get(
+                        "detail",
+                        {},
+                    )
+                    .get(
+                        "cross_tenant_behavior"
+                    )
+                    ==
+                    "not_found"
+                    and
+                    bank_statement_endpoints
+                    .get(
+                        "auto_match_line",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "bank_statements.reconcile"
+                    and
+                    bank_statement_endpoints
+                    .get(
+                        "match_line",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "bank_statements.reconcile"
+                    and
+                    bank_statement_endpoints
+                    .get(
+                        "ignore_line",
+                        {},
+                    )
+                    .get(
+                        "permission"
+                    )
+                    ==
+                    "bank_statements.reconcile"
                 ),
             )
             check(

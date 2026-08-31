@@ -147,3 +147,12 @@ class BankStatementRepository:
         statement.save()
 
         return statement
+
+    @staticmethod
+    def queryset_for_organization(
+        *,
+        organization,
+    ):
+        return BankStatement.objects(
+            organization=organization,
+        )

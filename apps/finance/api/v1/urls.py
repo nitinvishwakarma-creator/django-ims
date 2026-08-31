@@ -5,6 +5,7 @@ from django.urls import (
 from apps.finance.api.v1 import (
     accounting_report_views,
     bank_account_views,
+    bank_statement_views,
     bank_transaction_views,
     bank_transfer_views,
     chart_of_account_views,
@@ -124,6 +125,79 @@ urlpatterns = [
             .bank_transfer_detail_api
         ),
         name="bank_transfer_detail",
+    ),
+    path(
+        "bank-statements/",
+        (
+            bank_statement_views
+            .bank_statement_collection_api
+        ),
+        name="bank_statement_collection",
+    ),
+
+    path(
+        (
+            "bank-statements/"
+            "<str:statement_id>/cancel/"
+        ),
+        (
+            bank_statement_views
+            .bank_statement_cancel_api
+        ),
+        name="bank_statement_cancel",
+    ),
+
+    path(
+        (
+            "bank-statements/"
+            "<str:statement_id>/lines/"
+            "<str:line_number>/auto-match/"
+        ),
+        (
+            bank_statement_views
+            .bank_statement_line_auto_match_api
+        ),
+        name=(
+            "bank_statement_line_auto_match"
+        ),
+    ),
+
+    path(
+        (
+            "bank-statements/"
+            "<str:statement_id>/lines/"
+            "<str:line_number>/match/"
+        ),
+        (
+            bank_statement_views
+            .bank_statement_line_match_api
+        ),
+        name="bank_statement_line_match",
+    ),
+
+    path(
+        (
+            "bank-statements/"
+            "<str:statement_id>/lines/"
+            "<str:line_number>/ignore/"
+        ),
+        (
+            bank_statement_views
+            .bank_statement_line_ignore_api
+        ),
+        name="bank_statement_line_ignore",
+    ),
+
+    path(
+        (
+            "bank-statements/"
+            "<str:statement_id>/"
+        ),
+        (
+            bank_statement_views
+            .bank_statement_detail_api
+        ),
+        name="bank_statement_detail",
     ),
     path(
         "chart-of-accounts/",

@@ -934,3 +934,243 @@ class BankTransferAPISerializer:
             for transfer
             in transfers
         ]
+
+class BankStatementAPISerializer:
+
+    @staticmethod
+    def serialize_line(
+        line,
+    ):
+        if not line:
+            return None
+
+        return {
+            "line_number":
+                line.line_number,
+            "transaction_date": (
+                APISerializationService
+                .serialize_datetime(
+                    line.transaction_date
+                )
+            ),
+            "value_date": (
+                APISerializationService
+                .serialize_datetime(
+                    line.value_date
+                )
+            ),
+            "description":
+                (
+                    line.description
+                    or
+                    None
+                ),
+            "external_reference":
+                (
+                    line.external_reference
+                    or
+                    None
+                ),
+            "debit_amount":
+                str(
+                    line.debit_amount
+                ),
+            "credit_amount":
+                str(
+                    line.credit_amount
+                ),
+            "running_balance": (
+                str(
+                    line.running_balance
+                )
+                if (
+                    line.running_balance
+                    is not None
+                )
+                else None
+            ),
+            "match_status":
+                line.match_status,
+            "matched_transaction": (
+                BankTransactionAPISerializer
+                .serialize_summary(
+                    line.matched_transaction
+                )
+                if line.matched_transaction
+                else None
+            ),
+            "matched_at": (
+                APISerializationService
+                .serialize_datetime(
+                    line.matched_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_summary(
+        statement,
+    ):
+        if not statement:
+            return None
+
+        lines = (
+            statement.lines
+            or
+            []
+        )
+
+        matched_count = sum(
+            1
+            for line in lines
+            if line.match_status == "MATCHED"
+        )
+
+        ignored_count = sum(
+            1
+            for line in lines
+            if line.match_status == "IGNORED"
+        )
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    statement.id
+                )
+            ),
+            "statement_number":
+                statement.statement_number,
+            "bank_account": (
+                BankAccountAPISerializer
+                .serialize_summary(
+                    statement.bank_account
+                )
+            ),
+            "statement_start_date": (
+                APISerializationService
+                .serialize_datetime(
+                    statement
+                    .statement_start_date
+                )
+            ),
+            "statement_end_date": (
+                APISerializationService
+                .serialize_datetime(
+                    statement
+                    .statement_end_date
+                )
+            ),
+            "opening_balance":
+                str(
+                    statement.opening_balance
+                ),
+            "closing_balance":
+                str(
+                    statement.closing_balance
+                ),
+            "source_filename":
+                (
+                    statement.source_filename
+                    or
+                    None
+                ),
+            "source_type":
+                statement.source_type,
+            "status":
+                statement.status,
+            "line_count":
+                len(
+                    lines
+                ),
+            "matched_count":
+                matched_count,
+            "ignored_count":
+                ignored_count,
+            "unmatched_count": (
+                len(
+                    lines
+                )
+                -
+                matched_count
+                -
+                ignored_count
+            ),
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    statement.created_at
+                )
+            ),
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    statement.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_detail(
+        statement,
+    ):
+        if not statement:
+            return None
+
+        summary = (
+            BankStatementAPISerializer
+            .serialize_summary(
+                statement
+            )
+        )
+
+        return {
+            **summary,
+            "lines": [
+                (
+                    BankStatementAPISerializer
+                    .serialize_line(
+                        line
+                    )
+                )
+                for line
+                in (
+                    statement.lines
+                    or
+                    []
+                )
+            ],
+            "reconciled_at": (
+                APISerializationService
+                .serialize_datetime(
+                    statement.reconciled_at
+                )
+            ),
+            "cancelled_at": (
+                APISerializationService
+                .serialize_datetime(
+                    statement.cancelled_at
+                )
+            ),
+            "created_by": (
+                BankAccountAPISerializer
+                ._serialize_created_by(
+                    statement.created_by
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        statements,
+    ):
+        return [
+            (
+                BankStatementAPISerializer
+                .serialize_summary(
+                    statement
+                )
+            )
+            for statement
+            in statements
+        ]

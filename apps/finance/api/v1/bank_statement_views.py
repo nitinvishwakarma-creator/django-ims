@@ -1,7 +1,5 @@
 import json
-import tempfile
 
-from pathlib import Path
 
 from apps.authorization.services import (
     AuthorizationService,
@@ -21,8 +19,11 @@ from apps.finance.api.v1.serializers import (
     BankStatementAPISerializer,
     BankTransactionAPISerializer,
 )
-from apps.finance.importers.bank_statement_parser import (
-    BankStatementParser,
+from apps.core.services.background_job_service import (
+    BackgroundJobService,
+)
+from apps.core.services.background_upload_service import (
+    BackgroundUploadService,
 )
 from apps.finance.repositories.bank_statement_repository import (
     BankStatementRepository,
@@ -34,7 +35,6 @@ from apps.finance.services.bank_statement_api_service import (
 )
 
 
-MAX_UPLOAD_SIZE = 5 * 1024 * 1024
 
 
 def _json_body(
@@ -91,115 +91,6 @@ def _json_body(
                 request=request,
             ),
         )
-
-
-def _parse_uploaded_statement(
-    uploaded_file,
-):
-    if not uploaded_file:
-        raise BankStatementAPIValidationError(
-            details={
-                "file": [
-                    "A CSV or XLSX file is required.",
-                ],
-            },
-        )
-
-    if uploaded_file.size > MAX_UPLOAD_SIZE:
-        raise BankStatementAPIValidationError(
-            details={
-                "file": [
-                    "File size must not exceed 5 MB.",
-                ],
-            },
-        )
-
-    filename = Path(
-        uploaded_file.name
-        or
-        "statement"
-    ).name
-
-    suffix = Path(filename).suffix.lower()
-
-    if suffix not in {
-        ".csv",
-        ".xlsx",
-    }:
-        raise BankStatementAPIValidationError(
-            details={
-                "file": [
-                    "Upload a CSV or XLSX file.",
-                ],
-            },
-        )
-
-    temporary_path = None
-
-    try:
-        with tempfile.NamedTemporaryFile(
-            suffix=suffix,
-            delete=False,
-        ) as temporary_file:
-            temporary_path = Path(
-                temporary_file.name
-            )
-
-            for chunk in uploaded_file.chunks():
-                temporary_file.write(
-                    chunk
-                )
-
-        if suffix == ".csv":
-            rows = (
-                BankStatementParser
-                .parse_csv(
-                    str(
-                        temporary_path
-                    )
-                )
-            )
-            source_type = "CSV"
-
-        else:
-            rows = (
-                BankStatementParser
-                .parse_xlsx(
-                    str(
-                        temporary_path
-                    )
-                )
-            )
-            source_type = "XLSX"
-
-        return (
-            rows,
-            source_type,
-            filename,
-        )
-
-    except BankStatementAPIValidationError:
-        raise
-
-    except ValueError as exc:
-        raise BankStatementAPIValidationError(
-            message="Unable to parse bank statement.",
-            details={
-                "file": [
-                    str(exc),
-                ],
-            },
-        ) from exc
-
-    finally:
-        if (
-            temporary_path
-            and
-            temporary_path.exists()
-        ):
-            temporary_path.unlink(
-                missing_ok=True
-            )
 
 
 @api_login_required
@@ -306,91 +197,119 @@ def bank_statement_collection_api(
                 request=request,
             )
 
-        content_type = (
-            request.content_type
-            or
-            ""
-        ).lower()
-
-        if "multipart/form-data" not in content_type:
-            return APIResponseService.validation_error(
-                message=(
-                    "Content-Type must be multipart/form-data."
-                ),
-                details={
-                    "content_type": [
-                        "Upload the statement as form data.",
-                    ],
-                },
-                request=request,
-            )
+        uploaded_file = request.FILES.get(
+            "file"
+        )
 
         try:
-            (
-                raw_lines,
-                source_type,
-                source_filename,
-            ) = _parse_uploaded_statement(
-                request.FILES.get("file")
-            )
-
-            statement = (
-                BankStatementAPIService
-                .create_statement(
-                    user=request.api_user,
-                    organization=request.api_organization,
-                    bank_account_id=request.POST.get(
-                        "bank_account_id"
+            upload = (
+                BackgroundUploadService
+                .store_bank_statement(
+                    organization=(
+                        request.api_organization
                     ),
-                    statement_start_date=request.POST.get(
-                        "statement_start_date"
+                    uploaded_by=(
+                        request.api_user
                     ),
-                    statement_end_date=request.POST.get(
-                        "statement_end_date"
+                    uploaded_file=(
+                        uploaded_file
                     ),
-                    opening_balance=request.POST.get(
-                        "opening_balance"
-                    ),
-                    closing_balance=request.POST.get(
-                        "closing_balance"
-                    ),
-                    raw_lines=raw_lines,
-                    source_type=source_type,
-                    source_filename=source_filename,
                 )
             )
 
-        except BankStatementAPIValidationError as exc:
-            return APIResponseService.validation_error(
-                message=exc.message,
-                details=exc.details,
-                request=request,
+            job = (
+                BackgroundJobService
+                .create_job(
+                    organization=(
+                        request.api_organization
+                    ),
+                    created_by=(
+                        request.api_user
+                    ),
+                    job_type=(
+                        "BANK_STATEMENT_IMPORT"
+                    ),
+                    payload={
+                        "upload_id":
+                            str(upload.id),
+
+                        "bank_account_id":
+                            request.POST.get(
+                                "bank_account_id"
+                            ),
+
+                        "statement_start_date":
+                            request.POST.get(
+                                "statement_start_date"
+                            ),
+
+                        "statement_end_date":
+                            request.POST.get(
+                                "statement_end_date"
+                            ),
+
+                        "opening_balance":
+                            request.POST.get(
+                                "opening_balance"
+                            ),
+
+                        "closing_balance":
+                            request.POST.get(
+                                "closing_balance"
+                            ),
+                    },
+                    idempotency_key=(
+                        "BANK_STATEMENT_IMPORT:"
+                        f"{upload.id}"
+                    ),
+                )
             )
 
-        except BankStatementAPIStateError as exc:
-            return APIResponseService.unprocessable_entity(
-                message=exc.message,
-                details=exc.details,
-                request=request,
-            )
-
-        except PermissionError:
-            return APIResponseService.forbidden(
-                message="Permission denied.",
-                request=request,
+        except ValueError as exc:
+            return (
+                APIResponseService
+                .validation_error(
+                    message=str(exc),
+                    details={
+                        "file": [
+                            str(exc),
+                        ],
+                    },
+                    request=request,
+                )
             )
 
         return APIResponseService.success(
             data={
-                "bank_statement": (
-                    BankStatementAPISerializer
-                    .serialize_detail(
-                        statement
-                    )
-                ),
+                "job": {
+                    "id":
+                        str(job.id),
+
+                    "job_type":
+                        job.job_type,
+
+                    "status":
+                        job.status,
+
+                    "attempts":
+                        job.attempts,
+
+                    "max_attempts":
+                        job.max_attempts,
+
+                    "created_at": (
+                        job.created_at
+                        .isoformat()
+                        if job.created_at
+                        else None
+                    ),
+                },
             },
-            message="Bank statement imported successfully.",
-            status=201,
+            message=(
+                "Bank statement import "
+                "queued successfully."
+            ),
+            status=202,
             request=request,
         )
 

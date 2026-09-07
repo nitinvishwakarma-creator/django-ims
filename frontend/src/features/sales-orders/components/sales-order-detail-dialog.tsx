@@ -10,6 +10,8 @@ import {
   useAuth,
 } from "@/features/auth/auth-context";
 
+import DocumentActions from "@/features/documents/components/document-actions";
+
 import {
   useCancelSalesOrder,
   useConfirmSalesOrder,
@@ -376,12 +378,21 @@ export default function SalesOrderDetailDialog({
                 }
               </span>
 
-              <div className="flex flex-wrap gap-2">
-                {canUpdate
-                && salesOrder.status
-                  ===
-                  "DRAFT" ? (
-                  <>
+                <div className="flex flex-wrap gap-2">
+                  <DocumentActions
+                    documentType="SALES_ORDER"
+                    documentId={salesOrder.id}
+                    documentNumber={
+                      salesOrder.so_number
+                    }
+                    disabled={actionPending}
+                  />
+
+                  {canUpdate
+                  && salesOrder.status
+                    ===
+                    "DRAFT" ? (
+                    <>
                     <button
                       type="button"
                       disabled={actionPending}

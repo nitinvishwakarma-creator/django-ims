@@ -13,8 +13,11 @@ import {
   X,
 } from "lucide-react";
 
+import BankPaymentSuggestionActions from "@/features/banking/components/bank-payment-suggestion-actions";
+
 import {
   useAutoMatchStatementLine,
+  useBankPaymentSuggestionList,
   useBankStatement,
   useBankTransactionList,
   useCancelBankStatement,
@@ -118,6 +121,20 @@ export default function BankStatementDetailDialog({
   const statement =
     statementQuery.data;
 
+  const paymentSuggestionQuery =
+    useBankPaymentSuggestionList({
+      page_size: 100,
+      statement_id:
+        statementId,
+      sort: "-created_at",
+    });
+
+  const paymentSuggestions =
+    paymentSuggestionQuery.data
+      ?.bank_payment_suggestions
+    ??
+    [];
+
   const transactionQuery =
     useBankTransactionList({
       page_size: 100,
@@ -192,57 +209,99 @@ export default function BankStatementDetailDialog({
     ??
     ignoreMutation.error
     ??
-    cancelMutation.error;
+    cancelMutation.error
+    ??
+    transactionQuery.error
+    ??
+    paymentSuggestionQuery.error;
 
-  async function autoMatch(
+  function getPaymentSuggestion(
     lineNumber: number,
-  ): Promise<void> {
-    await autoMatchMutation.mutateAsync({
-      statementId,
-      lineNumber,
-      dateToleranceDays: 2,
-    });
+  ) {
+    return (
+      paymentSuggestions.find(
+        (suggestion) =>
+          String(
+            suggestion.line_number,
+          )
+          ===
+          String(
+            lineNumber,
+          )
+          &&
+          suggestion.status
+          !==
+          "REJECTED",
+      )
+      ??
+      paymentSuggestions.find(
+        (suggestion) =>
+          String(
+            suggestion.line_number,
+          )
+          ===
+          String(
+            lineNumber,
+          ),
+      )
+      ??
+      null
+    );
   }
 
-  async function manualMatch(
-    lineNumber: number,
-  ): Promise<void> {
-    const transactionId =
-      selectedTransactions[lineNumber];
+function autoMatch(
+  lineNumber: number,
+): void {
+  autoMatchMutation.mutate({
+    statementId,
+    lineNumber,
+    dateToleranceDays: 2,
+  });
+}
 
-    if (!transactionId) {
-      return;
-    }
+function manualMatch(
+  lineNumber: number,
+): void {
+  const transactionId =
+    selectedTransactions[lineNumber];
 
-    await matchMutation.mutateAsync({
+  if (!transactionId) {
+    return;
+  }
+
+  matchMutation.mutate(
+    {
       statementId,
       lineNumber,
       transactionId,
-    });
+    },
+    {
+      onSuccess: () => {
+        setSelectedTransactions(
+          (current) => ({
+            ...current,
+            [lineNumber]: "",
+          }),
+        );
+      },
+    },
+  );
+}
 
-    setSelectedTransactions(
-      (current) => ({
-        ...current,
-        [lineNumber]: "",
-      }),
-    );
-  }
+function ignoreLine(
+  lineNumber: number,
+): void {
+  ignoreMutation.mutate({
+    statementId,
+    lineNumber,
+  });
+}
 
-  async function ignoreLine(
-    lineNumber: number,
-  ): Promise<void> {
-    await ignoreMutation.mutateAsync({
-      statementId,
-      lineNumber,
-    });
-  }
-
-  async function cancelStatement():
-    Promise<void> {
-    await cancelMutation.mutateAsync(
-      statementId,
-    );
-  }
+function cancelStatement(): void {
+  cancelMutation.mutate(
+    statementId,
+  );
+}
 
   return (
     <div
@@ -403,9 +462,7 @@ export default function BankStatementDetailDialog({
                   <button
                     type="button"
                     disabled={isMutating}
-                    onClick={() => {
-                      void cancelStatement();
-                    }}
+                    onClick={cancelStatement}
                     className="
                       inline-flex items-center
                       justify-center gap-2
@@ -433,7 +490,7 @@ export default function BankStatementDetailDialog({
             <div
               className="
                 grid gap-4 sm:grid-cols-2
-                xl:grid-cols-4
+                xl:grid-cols-5
               "
             >
               {[
@@ -459,6 +516,10 @@ export default function BankStatementDetailDialog({
                   "Unmatched lines",
                   String(statement.unmatched_count),
                 ],
+                [
+                  "Ignored lines",
+                  String(statement.ignored_count),
+                ],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -477,6 +538,7 @@ export default function BankStatementDetailDialog({
                   >
                     {label}
                   </p>
+
                   <p
                     className="
                       mt-2 text-lg font-bold
@@ -635,7 +697,15 @@ export default function BankStatementDetailDialog({
                                     ??
                                     ""
                                   }
-                                  disabled={isMutating}
+                                    disabled={
+                                      isMutating
+                                      ||
+                                      transactionQuery.isLoading
+                                      ||
+                                      transactionQuery.isError
+                                      ||
+                                      transactions.length === 0
+                                    }
                                   onChange={(event) => {
                                     setSelectedTransactions(
                                       (current) => ({
@@ -655,7 +725,13 @@ export default function BankStatementDetailDialog({
                                   "
                                 >
                                   <option value="">
-                                    Select transaction
+                                    {transactionQuery.isLoading
+                                      ? "Loading transactions..."
+                                      : transactionQuery.isError
+                                        ? "Unable to load transactions"
+                                        : transactions.length === 0
+                                          ? "No unreconciled transactions"
+                                          : "Select transaction"}
                                   </option>
                                   {transactions.map(
                                     (transaction) => (
@@ -688,11 +764,11 @@ export default function BankStatementDetailDialog({
                                       line.line_number
                                     ]
                                   }
-                                  onClick={() => {
-                                    void manualMatch(
-                                      line.line_number,
-                                    );
-                                  }}
+                                    onClick={() => {
+                                      manualMatch(
+                                        line.line_number,
+                                      );
+                                    }}
                                   className="
                                     rounded-lg bg-blue-600
                                     px-3 py-2 text-xs
@@ -710,7 +786,7 @@ export default function BankStatementDetailDialog({
                                   type="button"
                                   disabled={isMutating}
                                   onClick={() => {
-                                    void autoMatch(
+                                    autoMatch(
                                       line.line_number,
                                     );
                                   }}
@@ -732,7 +808,7 @@ export default function BankStatementDetailDialog({
                                   type="button"
                                   disabled={isMutating}
                                   onClick={() => {
-                                    void ignoreLine(
+                                    ignoreLine(
                                       line.line_number,
                                     );
                                   }}
@@ -750,6 +826,28 @@ export default function BankStatementDetailDialog({
                                   Ignore
                                 </button>
                               </div>
+                              <BankPaymentSuggestionActions
+                                statementId={
+                                  statement.id
+                                }
+                                lineNumber={
+                                  line.line_number
+                                }
+                                currency={
+                                  currency
+                                }
+                                suggestion={
+                                  getPaymentSuggestion(
+                                    line.line_number,
+                                  )
+                                }
+                                disabled={
+                                  isMutating
+                                  ||
+                                  paymentSuggestionQuery
+                                    .isLoading
+                                }
+                              />
                             </div>
                           ) : (
                             <div

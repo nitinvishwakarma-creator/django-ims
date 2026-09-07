@@ -1,5 +1,7 @@
 "use client";
 
+import DocumentActions from "@/features/documents/components/document-actions";
+
 import {
   Ban,
   CircleDollarSign,
@@ -439,6 +441,17 @@ export default function InvoiceDetailDialog({
                   flex flex-wrap gap-2
                 "
               >
+                <DocumentActions
+                  documentType="INVOICE"
+                  documentId={invoice.id}
+                  documentNumber={
+                    invoice.invoice_number
+                  }
+                  defaultRecipient={
+                    invoice.customer.email
+                  }
+                  disabled={actionPending}
+                />
                 {(
                   canIssue
                   &&

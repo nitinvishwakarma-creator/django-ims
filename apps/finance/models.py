@@ -1104,6 +1104,10 @@ class DocumentDeliveryLog(Document):
     custom_message = BooleanField(
         default=False,
     )
+    background_job_key = StringField(
+        required=False,
+        max_length=200,
+    )
     status = StringField(
         required=True,
         choices=(
@@ -1136,6 +1140,7 @@ class DocumentDeliveryLog(Document):
 
         "indexes": [
             "organization",
+            "background_job_key",
             "user",
             "document_type",
             "document_id",

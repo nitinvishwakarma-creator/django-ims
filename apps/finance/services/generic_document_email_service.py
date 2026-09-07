@@ -27,6 +27,7 @@ class GenericDocumentEmailService:
         recipient_email_override=None,
         subject_override=None,
         body_override=None,
+        background_job_key=None,
     ):
         # ==================================================
         # BASIC VALIDATION
@@ -233,6 +234,7 @@ class GenericDocumentEmailService:
                 document_type=document_type,
                 document=document,
                 document_id=document.id,
+                background_job_key=background_job_key,
 
                 document_number=(
                     delivery_data[

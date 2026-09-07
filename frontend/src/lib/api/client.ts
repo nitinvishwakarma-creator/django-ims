@@ -151,6 +151,12 @@ export interface APIRequestOptions
   body?: unknown;
 }
 
+export interface APIBinaryResponse {
+  blob: Blob;
+  filename: string | null;
+  contentType: string;
+}
+
 export async function apiRequest<T>(
   path: string,
   options: APIRequestOptions = {},
@@ -249,4 +255,224 @@ export async function apiRequest<T>(
   }
 
   return body;
+}
+
+function getResponseFilename(
+  response: Response,
+): string | null {
+  const disposition =
+    response.headers.get(
+      "content-disposition",
+    );
+
+  if (!disposition) {
+    return null;
+  }
+
+  const utf8Match =
+    disposition.match(
+      /filename\*=UTF-8''([^;]+)/i,
+    );
+
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(
+        utf8Match[1],
+      );
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const quotedMatch =
+    disposition.match(
+      /filename="([^"]+)"/i,
+    );
+
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1];
+  }
+
+  const plainMatch =
+    disposition.match(
+      /filename=([^;]+)/i,
+    );
+
+  return plainMatch?.[1]?.trim() ?? null;
+}
+
+async function throwBinaryAPIError(
+  response: Response,
+): Promise<never> {
+  const contentType =
+    response.headers.get(
+      "content-type",
+    ) ?? "";
+
+  if (
+    contentType.includes(
+      "application/json",
+    )
+  ) {
+    const body =
+      (await response.json()) as APIErrorResponse;
+
+    throw new APIRequestError({
+      status: response.status,
+
+      code:
+        body.error?.code ??
+        "API_REQUEST_FAILED",
+
+      message:
+        body.error?.message ??
+        "The API request failed.",
+
+      details:
+        body.error?.details,
+
+      requestId:
+        body.request_id,
+    });
+  }
+
+  throw new APIRequestError({
+    status: response.status,
+    code: "API_REQUEST_FAILED",
+    message: "The API request failed.",
+  });
+}
+
+export async function apiBinaryRequest(
+  path: string,
+  options: APIRequestOptions = {},
+  retryCSRF = true,
+): Promise<APIBinaryResponse> {
+  const method = (
+    options.method ?? "GET"
+  ).toUpperCase();
+
+  const headers =
+    new Headers(
+      options.headers,
+    );
+
+  headers.set(
+    "Accept",
+    "*/*",
+  );
+
+  let requestBody:
+    BodyInit | undefined;
+
+  if (options.body !== undefined) {
+    if (
+      options.body
+      instanceof FormData
+    ) {
+      requestBody =
+        options.body;
+    } else {
+      headers.set(
+        "Content-Type",
+        "application/json",
+      );
+
+      requestBody =
+        JSON.stringify(
+          options.body,
+        );
+    }
+  }
+
+  if (isUnsafeMethod(method)) {
+    const csrfToken =
+      await getCSRFToken();
+
+    headers.set(
+      "X-CSRFToken",
+      csrfToken,
+    );
+  }
+
+  const response =
+    await fetch(
+      buildURL(path),
+      {
+        ...options,
+        method,
+        headers,
+        body: requestBody,
+        credentials: "include",
+        cache:
+          options.cache ??
+          "no-store",
+      },
+    );
+
+  if (!response.ok) {
+    if (
+      response.status === 403
+      &&
+      isUnsafeMethod(method)
+      &&
+      retryCSRF
+    ) {
+      const contentType =
+        response.headers.get(
+          "content-type",
+        ) ?? "";
+
+      if (
+        contentType.includes(
+          "application/json",
+        )
+      ) {
+        const body =
+          (await response.clone().json()) as APIErrorResponse;
+
+        if (
+          body.error?.code
+          === "CSRF_FAILED"
+        ) {
+          clearCSRFToken();
+
+          await getCSRFToken(
+            true,
+          );
+
+          return apiBinaryRequest(
+            path,
+            options,
+            false,
+          );
+        }
+      }
+    }
+
+    return throwBinaryAPIError(
+      response,
+    );
+  }
+
+  const blob =
+    await response.blob();
+
+  return {
+    blob,
+
+    filename:
+      getResponseFilename(
+        response,
+      ),
+
+    contentType:
+      response.headers.get(
+        "content-type",
+      )
+      ??
+      blob.type
+      ??
+      "application/octet-stream",
+  };
 }

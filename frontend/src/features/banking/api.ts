@@ -8,6 +8,12 @@ import type {
   BankAccountDetail,
   BankAccountListData,
   BankAccountListParameters,
+  BankPaymentSuggestionData,
+  BankPaymentSuggestionDetail,
+  BankPaymentSuggestionExecution,
+  BankPaymentSuggestionExecutionData,
+  BankPaymentSuggestionListData,
+  BankPaymentSuggestionListParameters,
   BankStatementAutoMatchData,
   BankStatementData,
   BankStatementDetail,
@@ -25,6 +31,7 @@ import type {
   CreateBankAccountInput,
   CreateBankTransactionInput,
   CreateBankTransferInput,
+  GeneratePaymentSuggestionInput,
   IgnoreStatementLineInput,
   ImportBankStatementInput,
   MatchStatementLineInput,
@@ -606,4 +613,152 @@ export async function ignoreStatementLine(
     );
 
   return response.data;
+}
+
+export async function listBankPaymentSuggestions(
+  parameters:
+    BankPaymentSuggestionListParameters = {},
+): Promise<BankPaymentSuggestionListData> {
+  const response =
+    await apiRequest<
+      BankPaymentSuggestionListData
+    >(
+      (
+        "/bank-payment-suggestions/"
+        +
+        buildQuery({
+          page:
+            parameters.page,
+          page_size:
+            parameters.page_size,
+          statement_id:
+            parameters.statement_id,
+          invoice_id:
+            parameters.invoice_id,
+          vendor_bill_id:
+            parameters.vendor_bill_id,
+          suggestion_type:
+            parameters.suggestion_type,
+          status:
+            parameters.status,
+          search:
+            parameters.search,
+          sort:
+            parameters.sort,
+        })
+      ),
+    );
+
+  return response.data;
+}
+
+export async function getBankPaymentSuggestion(
+  suggestionId: string,
+): Promise<BankPaymentSuggestionDetail> {
+  const response =
+    await apiRequest<
+      BankPaymentSuggestionData
+    >(
+      (
+        "/bank-payment-suggestions/"
+        +
+        `${suggestionId}/`
+      ),
+    );
+
+  return response
+    .data
+    .bank_payment_suggestion;
+}
+
+export async function generateBankPaymentSuggestion(
+  input: GeneratePaymentSuggestionInput,
+): Promise<BankPaymentSuggestionDetail> {
+  const response =
+    await apiRequest<
+      BankPaymentSuggestionData
+    >(
+      (
+        "/bank-statements/"
+        +
+        `${input.statementId}/lines/`
+        +
+        `${input.lineNumber}/`
+        +
+        "payment-suggestion/"
+      ),
+      {
+        method: "POST",
+      },
+    );
+
+  return response
+    .data
+    .bank_payment_suggestion;
+}
+
+export async function confirmBankPaymentSuggestion(
+  suggestionId: string,
+): Promise<BankPaymentSuggestionDetail> {
+  const response =
+    await apiRequest<
+      BankPaymentSuggestionData
+    >(
+      (
+        "/bank-payment-suggestions/"
+        +
+        `${suggestionId}/confirm/`
+      ),
+      {
+        method: "POST",
+      },
+    );
+
+  return response
+    .data
+    .bank_payment_suggestion;
+}
+
+export async function rejectBankPaymentSuggestion(
+  suggestionId: string,
+): Promise<BankPaymentSuggestionDetail> {
+  const response =
+    await apiRequest<
+      BankPaymentSuggestionData
+    >(
+      (
+        "/bank-payment-suggestions/"
+        +
+        `${suggestionId}/reject/`
+      ),
+      {
+        method: "POST",
+      },
+    );
+
+  return response
+    .data
+    .bank_payment_suggestion;
+}
+
+export async function executeBankPaymentSuggestion(
+  suggestionId: string,
+): Promise<BankPaymentSuggestionExecution> {
+  const response =
+    await apiRequest<
+      BankPaymentSuggestionExecutionData
+    >(
+      (
+        "/bank-payment-suggestions/"
+        +
+        `${suggestionId}/execute/`
+      ),
+      {
+        method: "POST",
+      },
+    );
+
+  return response
+    .data
+    .execution;
 }

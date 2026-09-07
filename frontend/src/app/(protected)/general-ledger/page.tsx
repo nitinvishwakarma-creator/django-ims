@@ -3,7 +3,7 @@
 import {
   useState,
 } from "react";
-
+import ReportExportActions from "@/features/documents/components/report-export-actions";
 import {
   BookOpen,
   Search,
@@ -378,7 +378,28 @@ export default function GeneralLedgerPage() {
           </p>
         ) : null}
 
-        <div className="mt-4 flex justify-end">
+        <div
+          className="
+            mt-4 flex flex-wrap
+            items-center justify-end gap-2
+          "
+        >
+        {reportParameters.account_id ? (
+          <ReportExportActions
+            resourceType="GENERAL_LEDGER"
+            parameters={{
+              account_id:
+                reportParameters.account_id,
+              start_date:
+                reportParameters.start_date,
+              end_date:
+                reportParameters.end_date,
+            }}
+            disabled={
+              ledgerQuery.isFetching
+            }
+          />
+        ) : null}
           <button
             type="button"
             disabled={

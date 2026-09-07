@@ -113,6 +113,7 @@ class DocumentDeliveryService:
         recipient_overridden=False,
         custom_subject=False,
         custom_message=False,
+        background_job_key=None,
     ):
         DocumentDeliveryService._check_user(
             user
@@ -191,6 +192,10 @@ class DocumentDeliveryService:
 
             custom_message=bool(
                 custom_message
+            ),
+
+            background_job_key=(
+                background_job_key
             ),
 
             status="PENDING",

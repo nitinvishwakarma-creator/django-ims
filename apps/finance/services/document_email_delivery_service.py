@@ -3,7 +3,9 @@ from django.conf import settings
 from django.core.mail import (
     EmailMessage,
 )
-
+from apps.finance.models import (
+    DocumentDeliveryLog,
+)
 from django.core.validators import (
     validate_email,
 )
@@ -42,6 +44,7 @@ class DocumentEmailDeliveryService:
         recipient_overridden=False,
         custom_subject=False,
         custom_message=False,
+        background_job_key=None,
     ):
         # ==================================================
         # RECIPIENT VALIDATION
@@ -92,6 +95,37 @@ class DocumentEmailDeliveryService:
                 )
             )
 
+        if background_job_key:
+            existing_delivery = (
+                DocumentDeliveryLog.objects(
+                    organization=organization,
+                    background_job_key=(
+                        background_job_key
+                    ),
+                    channel="EMAIL",
+                    status="SENT",
+                )
+                .first()
+            )
+
+            if existing_delivery:
+                return {
+                    "delivery":
+                        existing_delivery,
+
+                    "email":
+                        None,
+
+                    "message":
+                        message_data,
+
+                    "attachment":
+                        None,
+
+                    "sent_count":
+                        1,
+                }
+            
         # ==================================================
         # GENERATE PDF ATTACHMENT
         # ==================================================
@@ -136,6 +170,9 @@ class DocumentEmailDeliveryService:
 
                 custom_message=(
                     custom_message
+                ),
+                background_job_key=(
+                    background_job_key
                 ),
             )
         )

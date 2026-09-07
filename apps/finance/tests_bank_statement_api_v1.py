@@ -25,6 +25,13 @@ from django.test import (
     SimpleTestCase,
 )
 
+from apps.core.services.background_job_service import (
+    BackgroundJobService,
+)
+from apps.core.services.background_upload_service import (
+    BackgroundUploadService,
+)
+
 from apps.authorization.services import (
     AuthorizationService,
 )
@@ -329,89 +336,144 @@ class BankStatementAPIV1RegressionTestCase(
             "BST-TEST000001",
         )
 
-    def test_import_csv_returns_created_statement(
+    def test_import_csv_queues_background_job(
         self,
     ):
-        upload = SimpleUploadedFile(
+        upload_file = SimpleUploadedFile(
             "statement.csv",
             (
-                b"transaction_date,description,"
-                b"credit_amount\n"
-                b"2026-08-31,Receipt,250.00\n"
+                b"date,description,debit,credit\n"
+                b"2026-08-10,Customer payment,0,250\n"
             ),
             content_type="text/csv",
         )
 
-        parsed_lines = [
-            {
-                "transaction_date": "2026-08-31",
-                "description": "Receipt",
-                "credit_amount": "250.00",
-            },
-        ]
+        stored_upload = SimpleNamespace(
+            id=ObjectId(),
+        )
+
+        now = datetime.utcnow()
+
+        job = SimpleNamespace(
+            id=ObjectId(),
+            job_type="BANK_STATEMENT_IMPORT",
+            status="PENDING",
+            attempts=0,
+            max_attempts=3,
+            created_at=now,
+        )
 
         with (
             patch.object(
-                BankStatementParser,
-                "parse_csv",
-                return_value=parsed_lines,
-            ),
+                BackgroundUploadService,
+                "store_bank_statement",
+                return_value=stored_upload,
+            ) as upload_mock,
             patch.object(
-                BankStatementAPIService,
-                "create_statement",
-                return_value=self.statement,
-            ) as create_mock,
-            patch.object(
-                BankStatementAPISerializer,
-                "serialize_detail",
-                return_value={
-                    "id": str(self.statement.id),
-                    "statement_number": (
-                        self.statement.statement_number
-                    ),
-                },
-            ),
+                BackgroundJobService,
+                "create_job",
+                return_value=job,
+            ) as job_mock,
         ):
             response = self.client.post(
                 self.STATEMENTS_URL,
                 data={
-                    "file": upload,
+                    "file": upload_file,
                     "bank_account_id": str(
                         self.bank_account.id
                     ),
-                    "statement_start_date": (
-                        "2026-08-01"
-                    ),
-                    "statement_end_date": (
-                        "2026-08-31"
-                    ),
-                    "opening_balance": "1000.00",
-                    "closing_balance": "1250.00",
+                    "statement_start_date":
+                        "2026-08-01",
+                    "statement_end_date":
+                        "2026-08-31",
+                    "opening_balance":
+                        "1000.00",
+                    "closing_balance":
+                        "1250.00",
                 },
             )
 
         body = self.assert_success_contract(
             response,
-            201,
+            202,
         )
 
         self.assertEqual(
-            body["data"]["bank_statement"][
-                "statement_number"
-            ],
-            "BST-TEST000001",
+            body["data"]["job"]["id"],
+            str(job.id),
         )
+
         self.assertEqual(
-            create_mock.call_args.kwargs[
-                "source_type"
-            ],
-            "CSV",
+            body["data"]["job"]["job_type"],
+            "BANK_STATEMENT_IMPORT",
         )
+
         self.assertEqual(
-            create_mock.call_args.kwargs[
-                "raw_lines"
-            ],
-            parsed_lines,
+            body["data"]["job"]["status"],
+            "PENDING",
+        )
+
+        upload_mock.assert_called_once()
+
+        upload_kwargs = (
+            upload_mock.call_args.kwargs
+        )
+
+        self.assertIs(
+            upload_kwargs["organization"],
+            self.organization,
+        )
+
+        self.assertIs(
+            upload_kwargs["uploaded_by"],
+            self.user,
+        )
+
+        job_mock.assert_called_once()
+
+        job_kwargs = (
+            job_mock.call_args.kwargs
+        )
+
+        self.assertIs(
+            job_kwargs["organization"],
+            self.organization,
+        )
+
+        self.assertIs(
+            job_kwargs["created_by"],
+            self.user,
+        )
+
+        self.assertEqual(
+            job_kwargs["job_type"],
+            "BANK_STATEMENT_IMPORT",
+        )
+
+        self.assertEqual(
+            job_kwargs["payload"],
+            {
+                "upload_id":
+                    str(stored_upload.id),
+                "bank_account_id":
+                    str(self.bank_account.id),
+                "statement_start_date":
+                    "2026-08-01",
+                "statement_end_date":
+                    "2026-08-31",
+                "opening_balance":
+                    "1000.00",
+                "closing_balance":
+                    "1250.00",
+            },
+        )
+
+        self.assertEqual(
+            job_kwargs["idempotency_key"],
+            (
+                "BANK_STATEMENT_IMPORT:"
+                f"{stored_upload.id}"
+            ),
         )
 
     def test_detail_returns_statement(

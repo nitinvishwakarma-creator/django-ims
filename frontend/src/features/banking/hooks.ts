@@ -8,23 +8,29 @@ import {
   autoMatchStatementLine,
   cancelBankStatement,
   cancelBankTransfer,
+  confirmBankPaymentSuggestion,
   createBankAccount,
   createBankTransaction,
   createBankTransfer,
   deactivateBankAccount,
+  executeBankPaymentSuggestion,
+  generateBankPaymentSuggestion,
   getBankAccount,
+  getBankPaymentSuggestion,
   getBankStatement,
   getBankTransaction,
   getBankTransfer,
   ignoreStatementLine,
   importBankStatement,
   listBankAccounts,
+  listBankPaymentSuggestions,
   listBankStatements,
   listBankTransactions,
   listBankTransfers,
   matchStatementLine,
   postBankTransfer,
   reconcileBankTransaction,
+  rejectBankPaymentSuggestion,
   updateBankAccount,
 } from "@/features/banking/api";
 
@@ -35,12 +41,14 @@ import {
 import type {
   AutoMatchStatementLineInput,
   BankAccountListParameters,
+  BankPaymentSuggestionListParameters,
   BankStatementListParameters,
   BankTransactionListParameters,
   BankTransferListParameters,
   CreateBankAccountInput,
   CreateBankTransactionInput,
   CreateBankTransferInput,
+  GeneratePaymentSuggestionInput,
   IgnoreStatementLineInput,
   ImportBankStatementInput,
   MatchStatementLineInput,
@@ -726,6 +734,235 @@ export function useIgnoreStatementLine() {
           queryKey:
             bankingQueryKeys
             .statementLists(),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useBankPaymentSuggestionList(
+  parameters:
+    BankPaymentSuggestionListParameters,
+) {
+  return useQuery({
+    queryKey:
+      bankingQueryKeys
+      .paymentSuggestionList(
+        parameters,
+      ),
+
+    queryFn: () =>
+      listBankPaymentSuggestions(
+        parameters,
+      ),
+
+    staleTime: 15_000,
+  });
+}
+
+export function useBankPaymentSuggestion(
+  suggestionId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey:
+      bankingQueryKeys
+      .paymentSuggestionDetail(
+        suggestionId,
+      ),
+
+    queryFn: () =>
+      getBankPaymentSuggestion(
+        suggestionId,
+      ),
+
+    enabled:
+      enabled
+      &&
+      Boolean(
+        suggestionId,
+      ),
+
+    staleTime: 15_000,
+  });
+}
+
+export function useGenerateBankPaymentSuggestion() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      input:
+        GeneratePaymentSuggestionInput,
+    ) =>
+      generateBankPaymentSuggestion(
+        input,
+      ),
+
+    onSuccess: async (
+      suggestion,
+    ) => {
+      queryClient.setQueryData(
+        bankingQueryKeys
+          .paymentSuggestionDetail(
+            suggestion.id,
+          ),
+        suggestion,
+      );
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .paymentSuggestionLists(),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementDetail(
+              suggestion.statement.id,
+            ),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useConfirmBankPaymentSuggestion() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      suggestionId: string,
+    ) =>
+      confirmBankPaymentSuggestion(
+        suggestionId,
+      ),
+
+    onSuccess: async (
+      suggestion,
+    ) => {
+      queryClient.setQueryData(
+        bankingQueryKeys
+          .paymentSuggestionDetail(
+            suggestion.id,
+          ),
+        suggestion,
+      );
+
+      await queryClient
+        .invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .paymentSuggestionLists(),
+        });
+    },
+  });
+}
+
+export function useRejectBankPaymentSuggestion() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      suggestionId: string,
+    ) =>
+      rejectBankPaymentSuggestion(
+        suggestionId,
+      ),
+
+    onSuccess: async (
+      suggestion,
+    ) => {
+      queryClient.setQueryData(
+        bankingQueryKeys
+          .paymentSuggestionDetail(
+            suggestion.id,
+          ),
+        suggestion,
+      );
+
+      await queryClient
+        .invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .paymentSuggestionLists(),
+        });
+    },
+  });
+}
+
+export function useExecuteBankPaymentSuggestion() {
+  const queryClient =
+    useQueryClient();
+
+  return useMutation({
+    mutationFn: (
+      suggestionId: string,
+    ) =>
+      executeBankPaymentSuggestion(
+        suggestionId,
+      ),
+
+    onSuccess: async (
+      execution,
+    ) => {
+      const suggestion =
+        execution.suggestion;
+
+      queryClient.setQueryData(
+        bankingQueryKeys
+          .paymentSuggestionDetail(
+            suggestion.id,
+          ),
+        suggestion,
+      );
+
+      queryClient.setQueryData(
+        bankingQueryKeys
+          .transactionDetail(
+            execution
+              .bank_transaction
+              .id,
+          ),
+        execution.bank_transaction,
+      );
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .paymentSuggestionLists(),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementDetail(
+              suggestion.statement.id,
+            ),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .statementLists(),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .transactionLists(),
+        }),
+
+        queryClient.invalidateQueries({
+          queryKey:
+            bankingQueryKeys
+            .accountLists(),
         }),
       ]);
     },

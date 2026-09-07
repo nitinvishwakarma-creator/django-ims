@@ -11,6 +11,8 @@ import {
   XCircle,
 } from "lucide-react";
 
+import DocumentActions from "@/features/documents/components/document-actions";
+
 import {
   useCancelCreditNote,
   useCreditNote,
@@ -627,6 +629,16 @@ export default function CreditNoteDetailDialog({
             Close
           </button>
 
+          {creditNote ? (
+            <DocumentActions
+              documentType="CREDIT_NOTE"
+              documentId={creditNote.id}
+              documentNumber={
+                creditNote.credit_note_number
+              }
+              disabled={actionPending}
+            />
+          ) : null}
           {(
             creditNote?.status
             ===

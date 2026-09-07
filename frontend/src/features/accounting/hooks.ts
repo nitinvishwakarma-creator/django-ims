@@ -18,6 +18,10 @@ import {
   reverseJournalEntry,
   updateChartOfAccount,
   updateJournalEntry,
+  getAccountingDashboard,
+  getCashFlowReport,
+  getFinanceAudit,
+  getFinanceDashboard,
 } from "@/features/accounting/api";
 
 import {
@@ -34,6 +38,8 @@ import type {
   TrialBalanceParameters,
   UpdateChartOfAccountInput,
   UpdateJournalEntryInput,
+  AccountingDashboardParameters,
+  CashFlowReportParameters,
 } from "@/features/accounting/types";
 
 export function useChartOfAccountList(
@@ -478,6 +484,91 @@ export function useTrialBalance(
       getTrialBalance(
         parameters,
       ),
+
+    enabled,
+    staleTime: 30_000,
+  });
+}
+export function useFinanceDashboard(
+  enabled = true,
+) {
+  return useQuery({
+    queryKey:
+      accountingQueryKeys
+        .financeDashboard(),
+
+    queryFn:
+      getFinanceDashboard,
+
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useAccountingDashboard(
+  parameters:
+    AccountingDashboardParameters = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey:
+      accountingQueryKeys
+        .accountingDashboard(
+          parameters,
+        ),
+
+    queryFn: () =>
+      getAccountingDashboard(
+        parameters,
+      ),
+
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useCashFlowReport(
+  parameters:
+    CashFlowReportParameters,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey:
+      accountingQueryKeys
+        .cashFlow(
+          parameters,
+        ),
+
+    queryFn: () =>
+      getCashFlowReport(
+        parameters,
+      ),
+
+    enabled:
+      enabled
+      &&
+      Boolean(
+        parameters.start_date
+      )
+      &&
+      Boolean(
+        parameters.end_date
+      ),
+
+    staleTime: 30_000,
+  });
+}
+
+export function useFinanceAudit(
+  enabled = true,
+) {
+  return useQuery({
+    queryKey:
+      accountingQueryKeys
+        .financeAudit(),
+
+    queryFn:
+      getFinanceAudit,
 
     enabled,
     staleTime: 30_000,

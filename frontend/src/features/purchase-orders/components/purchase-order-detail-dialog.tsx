@@ -4,6 +4,8 @@ import {
   useState,
 } from "react";
 
+import DocumentActions from "@/features/documents/components/document-actions";
+
 import {
   CalendarDays,
   CheckCircle2,
@@ -1496,6 +1498,17 @@ export default function PurchaseOrderDetailDialog({
           >
             Close
           </button>
+
+          {purchaseOrder ? (
+            <DocumentActions
+              documentType="PURCHASE_ORDER"
+              documentId={purchaseOrder.id}
+              documentNumber={
+                purchaseOrder.po_number
+              }
+              disabled={actionPending}
+            />
+          ) : null}
 
           {canEdit
             ? (

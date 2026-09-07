@@ -1,4 +1,6 @@
 import type {
+  AccountingDashboardParameters,
+  CashFlowReportParameters,
   ChartOfAccountListParameters,
   GeneralLedgerParameters,
   JournalEntryListParameters,
@@ -99,5 +101,56 @@ export const accountingQueryKeys = {
     ...accountingQueryKeys
       .trialBalances(),
     parameters,
+  ] as const,
+  reports: () => [
+    ...accountingQueryKeys.all,
+    "reports",
+  ] as const,
+
+  financeDashboards: () => [
+    ...accountingQueryKeys.reports(),
+    "finance-dashboard",
+  ] as const,
+
+  financeDashboard: () => [
+    ...accountingQueryKeys
+      .financeDashboards(),
+  ] as const,
+
+  accountingDashboards: () => [
+    ...accountingQueryKeys.reports(),
+    "accounting-dashboard",
+  ] as const,
+
+  accountingDashboard: (
+    parameters:
+      AccountingDashboardParameters,
+  ) => [
+    ...accountingQueryKeys
+      .accountingDashboards(),
+    parameters,
+  ] as const,
+
+  cashFlows: () => [
+    ...accountingQueryKeys.reports(),
+    "cash-flow",
+  ] as const,
+
+  cashFlow: (
+    parameters:
+      CashFlowReportParameters,
+  ) => [
+    ...accountingQueryKeys.cashFlows(),
+    parameters,
+  ] as const,
+
+  financeAudits: () => [
+    ...accountingQueryKeys.reports(),
+    "finance-audit",
+  ] as const,
+
+  financeAudit: () => [
+    ...accountingQueryKeys
+      .financeAudits(),
   ] as const,
 };

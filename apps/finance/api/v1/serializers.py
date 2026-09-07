@@ -1375,3 +1375,995 @@ class BankPaymentSuggestionAPISerializer:
             for suggestion
             in suggestions
         ]
+
+class MainDashboardAPISerializer:
+
+    @staticmethod
+    def _serialize_date(
+        value,
+    ):
+        if value is None:
+            return None
+
+        if hasattr(
+            value,
+            "isoformat",
+        ):
+            return value.isoformat()
+
+        return value
+
+    @staticmethod
+    def serialize(
+        data,
+    ):
+        return {
+            "period": {
+                "start_date": (
+                    MainDashboardAPISerializer
+                    ._serialize_date(
+                        data[
+                            "period"
+                        ][
+                            "start_date"
+                        ]
+                    )
+                ),
+                "end_date": (
+                    MainDashboardAPISerializer
+                    ._serialize_date(
+                        data[
+                            "period"
+                        ][
+                            "end_date"
+                        ]
+                    )
+                ),
+            },
+
+            "kpis":
+                data["kpis"],
+
+            "sales_trend":
+                data[
+                    "sales_trend"
+                ],
+
+            "purchase_trend":
+                data[
+                    "purchase_trend"
+                ],
+
+            "cash_flow":
+                data[
+                    "cash_flow"
+                ],
+
+            "receivable_aging":
+                data[
+                    "receivable_aging"
+                ],
+
+            "invoice_status":
+                data[
+                    "invoice_status"
+                ],
+
+            "bill_status":
+                data[
+                    "bill_status"
+                ],
+
+            "inventory_status":
+                data[
+                    "inventory_status"
+                ],
+
+            "top_customers":
+                data[
+                    "top_customers"
+                ],
+
+            "top_suppliers":
+                data[
+                    "top_suppliers"
+                ],
+
+            "alerts":
+                data[
+                    "alerts"
+                ],
+
+            "recent_activity": [
+                {
+                    **activity,
+
+                    "activity_date": (
+                        MainDashboardAPISerializer
+                        ._serialize_date(
+                            activity.get(
+                                "activity_date"
+                            )
+                        )
+                    ),
+                }
+                for activity
+                in data[
+                    "recent_activity"
+                ]
+            ],
+        }
+
+class FinanceDashboardAPISerializer:
+
+    @staticmethod
+    def _serialize_decimal(
+        value,
+    ):
+        if value is None:
+            return None
+
+        return str(value)
+
+    @staticmethod
+    def serialize(
+        data,
+    ):
+        return {
+            "bank_accounts": {
+                "account_count":
+                    data[
+                        "bank_accounts"
+                    ][
+                        "account_count"
+                    ],
+
+                "total_balance":
+                    (
+                        FinanceDashboardAPISerializer
+                        ._serialize_decimal(
+                            data[
+                                "bank_accounts"
+                            ][
+                                "total_balance"
+                            ]
+                        )
+                    ),
+
+                "accounts": [
+                    {
+                        **account,
+
+                        "current_balance":
+                            (
+                                FinanceDashboardAPISerializer
+                                ._serialize_decimal(
+                                    account[
+                                        "current_balance"
+                                    ]
+                                )
+                            ),
+                    }
+                    for account
+                    in data[
+                        "bank_accounts"
+                    ][
+                        "accounts"
+                    ]
+                ],
+            },
+
+            "transactions": {
+                **data[
+                    "transactions"
+                ],
+
+                "total_in":
+                    (
+                        FinanceDashboardAPISerializer
+                        ._serialize_decimal(
+                            data[
+                                "transactions"
+                            ][
+                                "total_in"
+                            ]
+                        )
+                    ),
+
+                "total_out":
+                    (
+                        FinanceDashboardAPISerializer
+                        ._serialize_decimal(
+                            data[
+                                "transactions"
+                            ][
+                                "total_out"
+                            ]
+                        )
+                    ),
+
+                "net_cash_flow":
+                    (
+                        FinanceDashboardAPISerializer
+                        ._serialize_decimal(
+                            data[
+                                "transactions"
+                            ][
+                                "net_cash_flow"
+                            ]
+                        )
+                    ),
+            },
+
+            "statements":
+                data[
+                    "statements"
+                ],
+
+            "payment_suggestions":
+                data[
+                    "payment_suggestions"
+                ],
+
+            "receivables": {
+                **data[
+                    "receivables"
+                ],
+
+                "total_receivable":
+                    (
+                        FinanceDashboardAPISerializer
+                        ._serialize_decimal(
+                            data[
+                                "receivables"
+                            ][
+                                "total_receivable"
+                            ]
+                        )
+                    ),
+            },
+
+            "payables": {
+                **data[
+                    "payables"
+                ],
+
+                "total_payable":
+                    (
+                        FinanceDashboardAPISerializer
+                        ._serialize_decimal(
+                            data[
+                                "payables"
+                            ][
+                                "total_payable"
+                            ]
+                        )
+                    ),
+            },
+        }
+
+
+class AccountingDashboardAPISerializer:
+
+    @staticmethod
+    def _serialize_decimal(
+        value,
+    ):
+        if value is None:
+            return None
+
+        return str(value)
+
+    @staticmethod
+    def serialize(
+        data,
+    ):
+        return {
+            "as_of_date":
+                (
+                    data[
+                        "as_of_date"
+                    ].isoformat()
+                    if hasattr(
+                        data[
+                            "as_of_date"
+                        ],
+                        "isoformat",
+                    )
+                    else data[
+                        "as_of_date"
+                    ]
+                ),
+
+            "liquidity": {
+                key:
+                    (
+                        AccountingDashboardAPISerializer
+                        ._serialize_decimal(
+                            value
+                        )
+                    )
+                for key, value
+                in data[
+                    "liquidity"
+                ].items()
+            },
+
+            "working_capital": {
+                key:
+                    (
+                        AccountingDashboardAPISerializer
+                        ._serialize_decimal(
+                            value
+                        )
+                    )
+                for key, value
+                in data[
+                    "working_capital"
+                ].items()
+            },
+
+            "profitability": {
+                key: (
+                    value
+                    if isinstance(
+                        value,
+                        bool,
+                    )
+                    else (
+                        AccountingDashboardAPISerializer
+                        ._serialize_decimal(
+                            value
+                        )
+                    )
+                )
+                for key, value
+                in data[
+                    "profitability"
+                ].items()
+            },
+
+            "balance_sheet": {
+                key: (
+                    value
+                    if isinstance(
+                        value,
+                        bool,
+                    )
+                    else (
+                        AccountingDashboardAPISerializer
+                        ._serialize_decimal(
+                            value
+                        )
+                    )
+                )
+                for key, value
+                in data[
+                    "balance_sheet"
+                ].items()
+            },
+
+            "trial_balance": {
+                key: (
+                    value
+                    if isinstance(
+                        value,
+                        bool,
+                    )
+                    else (
+                        AccountingDashboardAPISerializer
+                        ._serialize_decimal(
+                            value
+                        )
+                    )
+                )
+                for key, value
+                in data[
+                    "trial_balance"
+                ].items()
+            },
+
+            "accounting_health":
+                data[
+                    "accounting_health"
+                ],
+        }
+
+
+class CashFlowReportAPISerializer:
+
+    @staticmethod
+    def _serialize_decimal(
+        value,
+    ):
+        if value is None:
+            return None
+
+        return str(value)
+
+    @staticmethod
+    def _serialize_date(
+        value,
+    ):
+        if value is None:
+            return None
+
+        if hasattr(
+            value,
+            "isoformat",
+        ):
+            return value.isoformat()
+
+        return value
+
+    @staticmethod
+    def serialize(
+        data,
+    ):
+        return {
+            "start_date":
+                (
+                    CashFlowReportAPISerializer
+                    ._serialize_date(
+                        data[
+                            "start_date"
+                        ]
+                    )
+                ),
+
+            "end_date":
+                (
+                    CashFlowReportAPISerializer
+                    ._serialize_date(
+                        data[
+                            "end_date"
+                        ]
+                    )
+                ),
+
+            "bank_account":
+                data[
+                    "bank_account"
+                ],
+
+            "opening_balance":
+                (
+                    CashFlowReportAPISerializer
+                    ._serialize_decimal(
+                        data[
+                            "opening_balance"
+                        ]
+                    )
+                ),
+
+            "total_in":
+                (
+                    CashFlowReportAPISerializer
+                    ._serialize_decimal(
+                        data[
+                            "total_in"
+                        ]
+                    )
+                ),
+
+            "total_out":
+                (
+                    CashFlowReportAPISerializer
+                    ._serialize_decimal(
+                        data[
+                            "total_out"
+                        ]
+                    )
+                ),
+
+            "net_cash_flow":
+                (
+                    CashFlowReportAPISerializer
+                    ._serialize_decimal(
+                        data[
+                            "net_cash_flow"
+                        ]
+                    )
+                ),
+
+            "closing_balance":
+                (
+                    CashFlowReportAPISerializer
+                    ._serialize_decimal(
+                        data[
+                            "closing_balance"
+                        ]
+                    )
+                ),
+
+            "transaction_count":
+                data[
+                    "transaction_count"
+                ],
+
+            "reconciled_count":
+                data[
+                    "reconciled_count"
+                ],
+
+            "unreconciled_count":
+                data[
+                    "unreconciled_count"
+                ],
+
+            "daily_summary": [
+                {
+                    **row,
+
+                    "money_in":
+                        (
+                            CashFlowReportAPISerializer
+                            ._serialize_decimal(
+                                row[
+                                    "money_in"
+                                ]
+                            )
+                        ),
+
+                    "money_out":
+                        (
+                            CashFlowReportAPISerializer
+                            ._serialize_decimal(
+                                row[
+                                    "money_out"
+                                ]
+                            )
+                        ),
+
+                    "net_cash_flow":
+                        (
+                            CashFlowReportAPISerializer
+                            ._serialize_decimal(
+                                row[
+                                    "net_cash_flow"
+                                ]
+                            )
+                        ),
+                }
+                for row
+                in data[
+                    "daily_summary"
+                ]
+            ],
+
+            "transactions": [
+                {
+                    **row,
+
+                    "transaction_date":
+                        (
+                            CashFlowReportAPISerializer
+                            ._serialize_date(
+                                row[
+                                    "transaction_date"
+                                ]
+                            )
+                        ),
+
+                    "amount":
+                        (
+                            CashFlowReportAPISerializer
+                            ._serialize_decimal(
+                                row[
+                                    "amount"
+                                ]
+                            )
+                        ),
+
+                    "signed_amount":
+                        (
+                            CashFlowReportAPISerializer
+                            ._serialize_decimal(
+                                row[
+                                    "signed_amount"
+                                ]
+                            )
+                        ),
+                }
+                for row
+                in data[
+                    "transactions"
+                ]
+            ],
+        }
+
+
+class FinanceAuditAPISerializer:
+
+    @staticmethod
+    def _serialize_value(
+        value,
+    ):
+        if hasattr(
+            value,
+            "isoformat",
+        ):
+            return value.isoformat()
+
+        if value.__class__.__name__ == "Decimal":
+            return str(value)
+
+        return value
+
+    @staticmethod
+    def _serialize_dict(
+        value,
+    ):
+        if isinstance(
+            value,
+            dict,
+        ):
+            return {
+                key:
+                    (
+                        FinanceAuditAPISerializer
+                        ._serialize_dict(
+                            item
+                        )
+                    )
+                for key, item
+                in value.items()
+            }
+
+        if isinstance(
+            value,
+            list,
+        ):
+            return [
+                (
+                    FinanceAuditAPISerializer
+                    ._serialize_dict(
+                        item
+                    )
+                )
+                for item
+                in value
+            ]
+
+        return (
+            FinanceAuditAPISerializer
+            ._serialize_value(
+                value
+            )
+        )
+
+    @staticmethod
+    def serialize(
+        data,
+    ):
+        return (
+            FinanceAuditAPISerializer
+            ._serialize_dict(
+                data
+            )
+        )
+
+class DocumentEmailRequestAPISerializer:
+
+    MAX_RECIPIENT_LENGTH = 320
+    MAX_SUBJECT_LENGTH = 500
+    MAX_MESSAGE_LENGTH = 10000
+
+    @staticmethod
+    def _normalize_optional_text(
+        value,
+        *,
+        field_name,
+        max_length,
+    ):
+        if value is None:
+            return None
+
+        if not isinstance(
+            value,
+            str,
+        ):
+            raise ValueError(
+                f"{field_name} must be a string."
+            )
+
+        normalized = value.strip()
+
+        if not normalized:
+            return None
+
+        if len(normalized) > max_length:
+            raise ValueError(
+                f"{field_name} exceeds maximum length "
+                f"of {max_length} characters."
+            )
+
+        return normalized
+
+    @staticmethod
+    def deserialize(
+        payload,
+    ):
+        if payload is None:
+            payload = {}
+
+        if not isinstance(
+            payload,
+            dict,
+        ):
+            raise ValueError(
+                "Request body must be a JSON object."
+            )
+
+        allowed_fields = {
+            "recipient_email",
+            "subject",
+            "message",
+        }
+
+        unknown_fields = (
+            set(payload.keys())
+            -
+            allowed_fields
+        )
+
+        if unknown_fields:
+            raise ValueError(
+                "Unsupported field(s): "
+                +
+                ", ".join(
+                    sorted(
+                        str(field)
+                        for field
+                        in unknown_fields
+                    )
+                )
+            )
+
+        recipient_email = (
+            DocumentEmailRequestAPISerializer
+            ._normalize_optional_text(
+                payload.get(
+                    "recipient_email"
+                ),
+                field_name="recipient_email",
+                max_length=(
+                    DocumentEmailRequestAPISerializer
+                    .MAX_RECIPIENT_LENGTH
+                ),
+            )
+        )
+
+        subject = (
+            DocumentEmailRequestAPISerializer
+            ._normalize_optional_text(
+                payload.get(
+                    "subject"
+                ),
+                field_name="subject",
+                max_length=(
+                    DocumentEmailRequestAPISerializer
+                    .MAX_SUBJECT_LENGTH
+                ),
+            )
+        )
+
+        message = (
+            DocumentEmailRequestAPISerializer
+            ._normalize_optional_text(
+                payload.get(
+                    "message"
+                ),
+                field_name="message",
+                max_length=(
+                    DocumentEmailRequestAPISerializer
+                    .MAX_MESSAGE_LENGTH
+                ),
+            )
+        )
+
+        if (
+            recipient_email
+            and
+            (
+                "@" not in recipient_email
+                or
+                recipient_email.startswith("@")
+                or
+                recipient_email.endswith("@")
+            )
+        ):
+            raise ValueError(
+                "Invalid recipient_email."
+            )
+
+        return {
+            "recipient_email":
+                recipient_email,
+
+            "subject":
+                subject,
+
+            "message":
+                message,
+        }
+
+
+class DocumentAccessLogAPISerializer:
+
+    @staticmethod
+    def serialize(
+        log,
+    ):
+        if not log:
+            return None
+
+        user = getattr(
+            log,
+            "user",
+            None,
+        )
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    log.id
+                )
+            ),
+
+            "user": (
+                {
+                    "id": (
+                        APISerializationService
+                        .serialize_identifier(
+                            user.id
+                        )
+                    ),
+                    "email":
+                        user.email,
+                }
+                if user
+                else None
+            ),
+
+            "document_type":
+                log.document_type,
+
+            "document_id":
+                log.document_id,
+
+            "document_number":
+                log.document_number,
+
+            "action":
+                log.action,
+
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    log.created_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        logs,
+    ):
+        return [
+            (
+                DocumentAccessLogAPISerializer
+                .serialize(
+                    log
+                )
+            )
+            for log
+            in (
+                logs
+                or
+                []
+            )
+        ]
+
+
+class DocumentDeliveryLogAPISerializer:
+
+    @staticmethod
+    def serialize(
+        log,
+    ):
+        if not log:
+            return None
+
+        return {
+            "id": (
+                APISerializationService
+                .serialize_identifier(
+                    log.id
+                )
+            ),
+
+            "document_type":
+                log.document_type,
+
+            "document_id":
+                log.document_id,
+
+            "document_number":
+                log.document_number,
+
+            "channel":
+                log.channel,
+
+            "recipient":
+                log.recipient,
+
+            "subject":
+                log.subject,
+
+            "status":
+                log.status,
+
+            "recipient_overridden":
+                bool(
+                    log.recipient_overridden
+                ),
+
+            "custom_subject":
+                bool(
+                    log.custom_subject
+                ),
+
+            "custom_message":
+                bool(
+                    log.custom_message
+                ),
+
+            "error_message":
+                (
+                    log.error_message
+                    or
+                    None
+                ),
+
+            "sent_at": (
+                APISerializationService
+                .serialize_datetime(
+                    log.sent_at
+                )
+            ),
+
+            "created_at": (
+                APISerializationService
+                .serialize_datetime(
+                    log.created_at
+                )
+            ),
+
+            "updated_at": (
+                APISerializationService
+                .serialize_datetime(
+                    log.updated_at
+                )
+            ),
+        }
+
+    @staticmethod
+    def serialize_many(
+        logs,
+    ):
+        return [
+            (
+                DocumentDeliveryLogAPISerializer
+                .serialize(
+                    log
+                )
+            )
+            for log
+            in (
+                logs
+                or
+                []
+            )
+        ]

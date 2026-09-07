@@ -10,7 +10,11 @@ from apps.finance.api.v1 import (
     bank_transaction_views,
     bank_transfer_views,
     chart_of_account_views,
+    document_log_views,
     journal_entry_views,
+    document_views,
+    export_views,
+    main_dashboard_views,
 )
 
 
@@ -383,5 +387,85 @@ urlpatterns = [
             .trial_balance_api
         ),
         name="trial_balance",
+    ),
+
+    path(
+        "dashboard/",
+        main_dashboard_views.main_dashboard_api,
+        name="main_dashboard",
+    ),
+    
+    path(
+        "finance-dashboard/",
+        (
+            accounting_report_views
+            .finance_dashboard_api
+        ),
+        name="finance_dashboard",
+    ),
+
+    path(
+        "accounting-dashboard/",
+        (
+            accounting_report_views
+            .accounting_dashboard_api
+        ),
+        name="accounting_dashboard",
+    ),
+
+    path(
+        "cash-flow/",
+        (
+            accounting_report_views
+            .cash_flow_report_api
+        ),
+        name="cash_flow_report",
+    ),
+
+    path(
+        "finance-audit/",
+        (
+            accounting_report_views
+            .finance_audit_api
+        ),
+        name="finance_audit",
+    ),
+    path(
+        "documents/<str:document_type>/<str:document_id>/pdf/",
+        document_views.document_pdf_api,
+        name="document_pdf",
+    ),
+    path(
+        "documents/<str:document_type>/<str:document_id>/email/",
+        document_views.document_email_api,
+        name="document_email",
+    ),
+    path(
+        "exports/<str:resource_type>/",
+        export_views.export_api,
+        name="export",
+    ),
+    path(
+        "document-access-logs/",
+        document_log_views.document_access_logs_api,
+        name="document_access_logs",
+    ),
+
+    path(
+        "document-access-logs/summary/",
+        document_log_views.document_access_log_summary_api,
+        name="document_access_log_summary",
+    ),
+
+    path(
+        "document-delivery-logs/",
+        document_log_views.document_delivery_logs_api,
+        name="document_delivery_logs",
+    ),
+
+    path(
+        "document-delivery-logs/summary/",
+        document_log_views.document_delivery_log_summary_api,
+        name="document_delivery_log_summary",
     ),
 ]

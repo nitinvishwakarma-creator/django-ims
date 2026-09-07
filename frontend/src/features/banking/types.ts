@@ -3,6 +3,16 @@ import type {
   APIQueryMetadata,
 } from "@/lib/api/types";
 
+import type {
+  CustomerPaymentDetail,
+  InvoiceSummary,
+} from "@/features/invoices/types";
+
+import type {
+  SupplierPaymentDetail,
+  VendorBillSummary,
+} from "@/features/vendor-bills/types";
+
 export type BankAccountType =
   | "BANK"
   | "CASH";
@@ -330,4 +340,87 @@ export interface MatchStatementLineInput {
 export interface IgnoreStatementLineInput {
   statementId: string;
   lineNumber: number;
+}
+
+export type BankPaymentSuggestionType =
+  | "CUSTOMER_RECEIPT"
+  | "SUPPLIER_PAYMENT";
+
+export type BankPaymentSuggestionStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "REJECTED";
+
+export interface BankPaymentSuggestionSummary {
+  id: string;
+  statement: BankStatementSummary;
+  line_number: string;
+  suggestion_type:
+    BankPaymentSuggestionType;
+  invoice: InvoiceSummary | null;
+  vendor_bill:
+    VendorBillSummary | null;
+  amount: string;
+  confidence: string;
+  match_reason: string | null;
+  status:
+    BankPaymentSuggestionStatus;
+  is_executed: boolean;
+  payment_reference: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BankPaymentSuggestionDetail
+  extends BankPaymentSuggestionSummary {
+  confirmed_at: string | null;
+  rejected_at: string | null;
+  executed_at: string | null;
+  created_by: BankingCreator | null;
+}
+
+export interface BankPaymentSuggestionListParameters {
+  page?: number;
+  page_size?: number;
+  statement_id?: string;
+  invoice_id?: string;
+  vendor_bill_id?: string;
+  suggestion_type?:
+    BankPaymentSuggestionType | "";
+  status?:
+    BankPaymentSuggestionStatus | "";
+  search?: string;
+  sort?: string;
+}
+
+export interface BankPaymentSuggestionListData {
+  bank_payment_suggestions:
+    BankPaymentSuggestionSummary[];
+  pagination: APIPagination;
+  query: APIQueryMetadata;
+}
+
+export interface BankPaymentSuggestionData {
+  bank_payment_suggestion:
+    BankPaymentSuggestionDetail;
+}
+
+export interface GeneratePaymentSuggestionInput {
+  statementId: string;
+  lineNumber: number;
+}
+
+export interface BankPaymentSuggestionExecution {
+  suggestion:
+    BankPaymentSuggestionDetail;
+  payment:
+    | CustomerPaymentDetail
+    | SupplierPaymentDetail;
+  bank_transaction:
+    BankTransactionDetail;
+}
+
+export interface BankPaymentSuggestionExecutionData {
+  execution:
+    BankPaymentSuggestionExecution;
 }

@@ -4,6 +4,8 @@ import {
   useState,
 } from "react";
 
+import DocumentActions from "@/features/documents/components/document-actions";
+
 import {
   BadgeCheck,
   RotateCcw,
@@ -812,6 +814,17 @@ export default function VendorDebitNoteDetailDialog({
           >
             Close
           </button>
+
+          {debitNote ? (
+            <DocumentActions
+              documentType="VENDOR_DEBIT_NOTE"
+              documentId={debitNote.id}
+              documentNumber={
+                debitNote.debit_note_number
+              }
+              disabled={actionPending}
+            />
+          ) : null}
 
           {debitNote?.status
             ===

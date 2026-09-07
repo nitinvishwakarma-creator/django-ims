@@ -1,5 +1,7 @@
 "use client";
 
+import DocumentActions from "@/features/documents/components/document-actions";
+
 import {
   useState,
 } from "react";
@@ -1069,7 +1071,19 @@ export default function VendorBillDetailDialog({
             >
               Close
             </button>
-
+              {vendorBill ? (
+                <DocumentActions
+                  documentType="VENDOR_BILL"
+                  documentId={vendorBill.id}
+                  documentNumber={
+                    vendorBill.bill_number
+                  }
+                  defaultRecipient={
+                    vendorBill.supplier.email
+                  }
+                  disabled={actionPending}
+                />
+              ) : null}
             {canPost
               ? (
                 <button

@@ -206,6 +206,7 @@ else:
         "127.0.0.1",
         "localhost",
         "testserver",
+        "172.20.10.7",
     ]
 
 
@@ -225,7 +226,8 @@ FRONTEND_ORIGINS_RAW = (
             "http://localhost:3000,"
             "http://127.0.0.1:3000,"
             "http://localhost:8081,"
-            "http://127.0.0.1:8081"
+            "http://127.0.0.1:8081,"
+            "http://172.20.10.7:3000"
         ),
     )
     .strip()
@@ -320,6 +322,8 @@ else:
     CSRF_TRUSTED_ORIGINS = [
         "http://127.0.0.1:8000",
         "http://localhost:8000",
+        "http://172.20.10.7:3000",
+
 
         *FRONTEND_ORIGINS,
     ]

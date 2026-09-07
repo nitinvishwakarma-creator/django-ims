@@ -237,3 +237,189 @@ export interface TrialBalanceParameters {
   as_of_date?: string;
   include_zero_balances?: boolean;
 }
+
+export interface FinanceDashboardBankAccount {
+  id: string;
+  [key: string]: unknown;
+  current_balance: string;
+}
+
+export interface FinanceDashboardBankAccounts {
+  account_count: number;
+  total_balance: string;
+  accounts: FinanceDashboardBankAccount[];
+}
+
+export interface FinanceDashboardTransactions {
+  total_in: string;
+  total_out: string;
+  net_cash_flow: string;
+  [key: string]: unknown;
+}
+
+export interface FinanceDashboardStatements {
+  [key: string]: unknown;
+}
+
+export interface FinanceDashboardPaymentSuggestions {
+  [key: string]: unknown;
+}
+
+export interface FinanceDashboardReceivables {
+  total_receivable: string;
+  [key: string]: unknown;
+}
+
+export interface FinanceDashboardPayables {
+  total_payable: string;
+  [key: string]: unknown;
+}
+
+export interface FinanceDashboard {
+  bank_accounts: FinanceDashboardBankAccounts;
+  transactions: FinanceDashboardTransactions;
+  statements: FinanceDashboardStatements;
+  payment_suggestions:
+    FinanceDashboardPaymentSuggestions;
+  receivables: FinanceDashboardReceivables;
+  payables: FinanceDashboardPayables;
+}
+
+export interface FinanceDashboardData {
+  finance_dashboard: FinanceDashboard;
+}
+
+export interface AccountingDashboardSection {
+  [key: string]:
+    | string
+    | number
+    | boolean
+    | null;
+}
+
+export interface AccountingDashboard {
+  as_of_date: string | null;
+  liquidity: AccountingDashboardSection;
+  working_capital: AccountingDashboardSection;
+  profitability: AccountingDashboardSection;
+  balance_sheet: AccountingDashboardSection;
+  trial_balance: AccountingDashboardSection;
+  accounting_health:
+    Record<string, unknown>;
+}
+
+export interface AccountingDashboardData {
+  accounting_dashboard: AccountingDashboard;
+}
+
+export interface AccountingDashboardParameters {
+  as_of_date?: string;
+}
+
+export interface CashFlowBankAccount {
+  id?: string;
+  [key: string]: unknown;
+}
+
+export interface CashFlowDailySummary {
+  money_in: string;
+  money_out: string;
+  net_cash_flow: string;
+  [key: string]: unknown;
+}
+
+export interface CashFlowTransaction {
+  transaction_date: string | null;
+  amount: string;
+  signed_amount: string;
+  [key: string]: unknown;
+}
+
+export interface CashFlowReport {
+  start_date: string;
+  end_date: string;
+  bank_account:
+    CashFlowBankAccount | null;
+  opening_balance: string;
+  total_in: string;
+  total_out: string;
+  net_cash_flow: string;
+  closing_balance: string;
+  transaction_count: number;
+  reconciled_count: number;
+  unreconciled_count: number;
+  daily_summary: CashFlowDailySummary[];
+  transactions: CashFlowTransaction[];
+}
+
+export interface CashFlowReportData {
+  cash_flow: CashFlowReport;
+}
+
+export interface CashFlowReportParameters {
+  start_date: string;
+  end_date: string;
+  bank_account_id?: string;
+}
+
+export interface FinanceAuditStatementExceptions {
+  unmatched_lines:
+    Record<string, unknown>[];
+
+  invalid_matched_lines:
+    Record<string, unknown>[];
+
+  stale_unresolved_links:
+    Record<string, unknown>[];
+}
+
+export interface FinanceAuditTransactionExceptions {
+  unreconciled_transactions:
+    Record<string, unknown>[];
+
+  duplicate_matches:
+    Record<string, unknown>[];
+}
+
+export interface FinanceAuditSuggestionExceptions {
+  pending:
+    Record<string, unknown>[];
+
+  confirmed_unexecuted:
+    Record<string, unknown>[];
+
+  rejected:
+    Record<string, unknown>[];
+
+  invalid_execution_state:
+    Record<string, unknown>[];
+}
+
+export interface FinanceAuditReport {
+  healthy: boolean;
+
+  critical_exception_count:
+    number;
+
+  attention_count:
+    number;
+
+  statement_exceptions:
+    FinanceAuditStatementExceptions;
+
+  transaction_exceptions:
+    FinanceAuditTransactionExceptions;
+
+  suggestion_exceptions:
+    FinanceAuditSuggestionExceptions;
+
+  invoice_exceptions:
+    Record<string, unknown>[];
+
+  vendor_bill_exceptions:
+    Record<string, unknown>[];
+}
+
+export interface FinanceAuditData {
+  finance_audit: FinanceAuditReport;
+}

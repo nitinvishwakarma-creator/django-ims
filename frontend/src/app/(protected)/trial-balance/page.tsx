@@ -3,7 +3,7 @@
 import {
   useState,
 } from "react";
-
+import ReportExportActions from "@/features/documents/components/report-export-actions";
 import {
   RefreshCw,
   Scale,
@@ -258,6 +258,24 @@ export default function TrialBalancePage() {
             </label>
           </div>
 
+        <div
+          className="
+            flex flex-wrap items-center
+            justify-end gap-2
+          "
+        >
+          <ReportExportActions
+            resourceType="TRIAL_BALANCE"
+            parameters={{
+              as_of_date:
+                parameters.as_of_date,
+              include_zero_balances:
+                parameters.include_zero_balances,
+            }}
+            disabled={
+              trialBalanceQuery.isFetching
+            }
+          />
           <button
             type="button"
             disabled={
@@ -286,9 +304,9 @@ export default function TrialBalancePage() {
             />
             Generate report
           </button>
+</div>  
         </div>
       </section>
-
       {trialBalanceQuery.isLoading ? (
         <section
           className="

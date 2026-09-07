@@ -8,6 +8,8 @@ import {
   useCustomerPayment,
 } from "@/features/customer-payments/hooks";
 
+import DocumentActions from "@/features/documents/components/document-actions";
+
 interface CustomerPaymentDetailDialogProps {
   open: boolean;
   paymentId: string | null;
@@ -184,6 +186,26 @@ export default function CustomerPaymentDetailDialog({
             <X size={20} />
           </button>
         </header>
+
+        {payment ? (
+          <div
+            className="
+              flex flex-wrap justify-end
+              gap-2 border-b
+              border-slate-200
+              bg-white px-5 py-3
+              sm:px-6
+            "
+          >
+            <DocumentActions
+              documentType="CUSTOMER_PAYMENT"
+              documentId={payment.id}
+              documentNumber={
+                payment.payment_number
+              }
+            />
+          </div>
+        ) : null}
 
         {paymentQuery.isPending ? (
           <div

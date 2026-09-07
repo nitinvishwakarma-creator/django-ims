@@ -17,6 +17,9 @@ import {
   useAuth,
 } from "@/features/auth/auth-context";
 
+import NotificationMenu
+  from "@/features/notifications/components/notification-menu";
+
 interface AppHeaderProps {
   onOpenMobile: () => void;
 }
@@ -117,6 +120,7 @@ export default function AppHeader({
           flex items-center gap-3
         "
       >
+        <NotificationMenu />
         <div
           className="
             hidden text-right sm:block

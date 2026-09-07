@@ -5,6 +5,10 @@ from django.urls import (
 )
 
 from apps.core.api.v1 import views
+from apps.core.api.v1 import (
+    background_job_views,
+    notification_views,
+)
 
 
 app_name = "api_v1"
@@ -83,6 +87,50 @@ urlpatterns = [
             ),
             namespace="purchasing_api_v1",
         ),
+    ),
+    path(
+        "background-jobs/",
+        (
+            background_job_views
+            .background_job_list_api
+        ),
+        name="background_job_list",
+    ),
+
+    path(
+        "background-jobs/<str:job_id>/",
+        (
+            background_job_views
+            .background_job_detail_api
+        ),
+        name="background_job_detail",
+    ),
+
+    path(
+        "background-jobs/<str:job_id>/retry/",
+        (
+            background_job_views
+            .background_job_retry_api
+        ),
+        name="background_job_retry",
+    ),
+
+    path(
+        "notifications/",
+        (
+            notification_views
+            .notification_list_api
+        ),
+        name="notification_list",
+    ),
+
+    path(
+        "notifications/<str:notification_id>/read/",
+        (
+            notification_views
+            .notification_read_api
+        ),
+        name="notification_read",
     ),
 ]
 

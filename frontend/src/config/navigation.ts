@@ -3,6 +3,9 @@ import type {
 } from "lucide-react";
 
 import {
+  ListChecks,
+  Activity,
+  ChartSpline,
   BookOpen,
   Scale,
   ArrowDownUp,
@@ -192,6 +195,34 @@ export const navigationSections:
         label: "Finance",
         items: [
           {
+            label: "Financial Dashboard",
+            href: "/financial-dashboard",
+            icon: ChartNoAxesCombined,
+            permission:
+              "accounting_reports.read",
+          },
+          {
+            label: "Cash Flow",
+            href: "/cash-flow",
+            icon: ChartSpline,
+            permission:
+              "bank_transactions.read",
+          },
+          {
+            label: "Finance Audit",
+            href: "/finance-audit",
+            icon: Activity,
+            permission:
+              "bank_transactions.read",
+          },
+          {
+            label: "Document Activity",
+            href: "/document-logs",
+            icon: Activity,
+            permission:
+              "accounting_audit.read",
+          },
+          {
             label: "Chart of Accounts",
             href: "/chart-of-accounts",
             icon: ChartNoAxesCombined,
@@ -255,6 +286,11 @@ export const navigationSections:
           href: "/settings/permissions",
           icon: Tags,
           permission: "permissions.read",
+        },
+        {
+          label: "Background Jobs",
+          href: "/background-jobs",
+          icon: ListChecks,
         },
         {
           label: "Settings",

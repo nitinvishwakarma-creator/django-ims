@@ -23,6 +23,16 @@ import type {
   TrialBalanceParameters,
   UpdateChartOfAccountInput,
   UpdateJournalEntryInput,
+  AccountingDashboard,
+  AccountingDashboardData,
+  AccountingDashboardParameters,
+  CashFlowReport,
+  CashFlowReportData,
+  CashFlowReportParameters,
+  FinanceAuditData,
+  FinanceAuditReport,
+  FinanceDashboard,
+  FinanceDashboardData,
 } from "@/features/accounting/types";
 
 type QueryValue =
@@ -380,4 +390,82 @@ export async function getTrialBalance(
   return response
     .data
     .trial_balance;
+}
+
+export async function getFinanceDashboard():
+  Promise<FinanceDashboard> {
+  const response =
+    await apiRequest<
+      FinanceDashboardData
+    >(
+      "/finance-dashboard/",
+    );
+
+  return response
+    .data
+    .finance_dashboard;
+}
+
+export async function getAccountingDashboard(
+  parameters:
+    AccountingDashboardParameters = {},
+): Promise<AccountingDashboard> {
+  const response =
+    await apiRequest<
+      AccountingDashboardData
+    >(
+      (
+        "/accounting-dashboard/"
+        +
+        buildQuery({
+          as_of_date:
+            parameters.as_of_date,
+        })
+      ),
+    );
+
+  return response
+    .data
+    .accounting_dashboard;
+}
+
+export async function getCashFlowReport(
+  parameters:
+    CashFlowReportParameters,
+): Promise<CashFlowReport> {
+  const response =
+    await apiRequest<
+      CashFlowReportData
+    >(
+      (
+        "/cash-flow/"
+        +
+        buildQuery({
+          start_date:
+            parameters.start_date,
+          end_date:
+            parameters.end_date,
+          bank_account_id:
+            parameters.bank_account_id,
+        })
+      ),
+    );
+
+  return response
+    .data
+    .cash_flow;
+}
+
+export async function getFinanceAudit():
+  Promise<FinanceAuditReport> {
+  const response =
+    await apiRequest<
+      FinanceAuditData
+    >(
+      "/finance-audit/",
+    );
+
+  return response
+    .data
+    .finance_audit;
 }

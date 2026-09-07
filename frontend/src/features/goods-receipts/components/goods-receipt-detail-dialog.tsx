@@ -5,6 +5,8 @@ import {
   X,
 } from "lucide-react";
 
+import DocumentActions from "@/features/documents/components/document-actions";
+
 import {
   useGoodsReceipt,
 } from "@/features/goods-receipts/hooks";
@@ -713,7 +715,8 @@ export default function GoodsReceiptDetailDialog({
 
         <footer
           className="
-            flex justify-end
+            flex flex-wrap items-center
+            justify-end gap-2
             border-t border-slate-200
             bg-white px-4 py-4
             sm:px-6
@@ -733,6 +736,15 @@ export default function GoodsReceiptDetailDialog({
           >
             Close
           </button>
+            {goodsReceipt ? (
+              <DocumentActions
+                documentType="GOODS_RECEIPT"
+                documentId={goodsReceipt.id}
+                documentNumber={
+                  goodsReceipt.grn_number
+                }
+              />
+            ) : null}
         </footer>
       </div>
     </div>

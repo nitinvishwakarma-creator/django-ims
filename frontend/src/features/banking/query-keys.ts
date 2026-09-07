@@ -1,5 +1,6 @@
 import type {
   BankAccountListParameters,
+  BankPaymentSuggestionListParameters,
   BankStatementListParameters,
   BankTransactionListParameters,
   BankTransferListParameters,
@@ -136,5 +137,38 @@ export const bankingQueryKeys = {
     ...bankingQueryKeys
       .statementDetails(),
     statementId,
+  ] as const,
+  paymentSuggestions: () => [
+    ...bankingQueryKeys.all,
+    "payment-suggestions",
+  ] as const,
+
+  paymentSuggestionLists: () => [
+    ...bankingQueryKeys
+      .paymentSuggestions(),
+    "list",
+  ] as const,
+
+  paymentSuggestionList: (
+    parameters:
+      BankPaymentSuggestionListParameters,
+  ) => [
+    ...bankingQueryKeys
+      .paymentSuggestionLists(),
+    parameters,
+  ] as const,
+
+  paymentSuggestionDetails: () => [
+    ...bankingQueryKeys
+      .paymentSuggestions(),
+    "detail",
+  ] as const,
+
+  paymentSuggestionDetail: (
+    suggestionId: string,
+  ) => [
+    ...bankingQueryKeys
+      .paymentSuggestionDetails(),
+    suggestionId,
   ] as const,
 };

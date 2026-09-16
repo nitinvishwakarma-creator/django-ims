@@ -6,24 +6,25 @@ import {
 } from "react";
 
 import {
+  KeyRound,
   RefreshCw,
   Search,
-  ShieldCheck,
 } from "lucide-react";
+
+import {
+  usePermissionList,
+} from "@/features/roles";
 
 import {
   useAuth,
 } from "@/features/auth/auth-context";
 
 import {
-  useRoleLookup,
-} from "@/features/users/hooks";
-
-import {
   hasPermission,
 } from "@/lib/authorization/permissions";
 
-export default function RolesPage() {
+
+export default function PermissionsPage() {
   const {
     authentication,
   } = useAuth();
@@ -34,17 +35,15 @@ export default function RolesPage() {
   ] = useState("");
 
   const [
-    activeFilter,
-    setActiveFilter,
-  ] = useState<
-    "all" | "active" | "inactive"
-  >("all");
+    moduleFilter,
+    setModuleFilter,
+  ] = useState("");
 
   const [
-    typeFilter,
-    setTypeFilter,
+    statusFilter,
+    setStatusFilter,
   ] = useState<
-    "all" | "system" | "custom"
+    "all" | "active" | "inactive"
   >("all");
 
   const [
@@ -59,40 +58,46 @@ export default function RolesPage() {
     ??
     [];
 
-  const canRead = hasPermission(
-    permissions,
-    "roles.read",
-  );
+  const canRead =
+    hasPermission(
+      permissions,
+      "permissions.read",
+    );
 
-  const listParameters = useMemo(
+  const parameters = useMemo(
     () => ({
       page,
-      page_size: 25,
+      page_size: 50,
+
       search:
         search.trim()
         ||
         undefined,
+
+      module:
+        moduleFilter
+        ||
+        undefined,
+
       is_active:
-        activeFilter === "all"
+        statusFilter === "all"
           ? undefined
-          : activeFilter === "active",
-      is_system:
-        typeFilter === "all"
-          ? undefined
-          : typeFilter === "system",
-      sort: "name",
+          : statusFilter === "active",
+
+      sort: "module,code",
     }),
     [
-      activeFilter,
+      moduleFilter,
       page,
       search,
-      typeFilter,
+      statusFilter,
     ],
   );
 
-  const roleQuery =
-    useRoleLookup(
-      listParameters,
+  const permissionQuery =
+    usePermissionList(
+      parameters,
+      canRead,
     );
 
   if (!authentication) {
@@ -104,8 +109,8 @@ export default function RolesPage() {
       <section
         className="
           rounded-2xl border
-          border-amber-200 bg-amber-50
-          p-6
+          border-amber-200
+          bg-amber-50 p-6
         "
       >
         <h1
@@ -114,7 +119,7 @@ export default function RolesPage() {
             text-amber-900
           "
         >
-          Role access restricted
+          Permission access restricted
         </h1>
 
         <p
@@ -123,20 +128,26 @@ export default function RolesPage() {
           "
         >
           Your role does not include the
-          roles.read permission.
+          permissions.read permission.
         </p>
       </section>
     );
   }
 
-  const roles =
-    roleQuery.data
-      ?.roles
+  const permissionItems =
+    permissionQuery.data
+      ?.permissions
+    ??
+    [];
+
+  const modules =
+    permissionQuery.data
+      ?.modules
     ??
     [];
 
   const pagination =
-    roleQuery.data
+    permissionQuery.data
       ?.pagination;
 
   return (
@@ -144,7 +155,8 @@ export default function RolesPage() {
       <div
         className="
           flex flex-col gap-4
-          sm:flex-row sm:items-center
+          sm:flex-row
+          sm:items-center
           sm:justify-between
         "
       >
@@ -154,7 +166,7 @@ export default function RolesPage() {
               flex items-center gap-2
             "
           >
-            <ShieldCheck
+            <KeyRound
               size={25}
               className="text-blue-600"
             />
@@ -165,35 +177,37 @@ export default function RolesPage() {
                 text-slate-900
               "
             >
-              Roles
+              Permissions
             </h1>
           </div>
 
           <p
             className="
-              mt-1 text-sm text-slate-600
+              mt-1 text-sm
+              text-slate-600
             "
           >
-            Review organization roles and
-            their assigned permission counts.
+            Review application permissions
+            available for role assignment.
           </p>
         </div>
 
         <button
           type="button"
           disabled={
-            roleQuery.isFetching
+            permissionQuery.isFetching
           }
           onClick={() => {
-            void roleQuery.refetch();
+            void permissionQuery.refetch();
           }}
           className="
             inline-flex items-center
             justify-center gap-2
             rounded-lg border
-            border-slate-300 bg-white
-            px-4 py-2 text-sm
-            font-semibold text-slate-700
+            border-slate-300
+            bg-white px-4 py-2
+            text-sm font-semibold
+            text-slate-700
             hover:bg-slate-50
             disabled:cursor-not-allowed
             disabled:opacity-50
@@ -202,7 +216,7 @@ export default function RolesPage() {
           <RefreshCw
             size={16}
             className={
-              roleQuery.isFetching
+              permissionQuery.isFetching
                 ? "animate-spin"
                 : undefined
             }
@@ -244,7 +258,7 @@ export default function RolesPage() {
             <input
               type="search"
               value={search}
-              placeholder="Search name or description"
+              placeholder="Search code or name"
               onChange={(event) => {
                 setSearch(
                   event.target.value,
@@ -274,13 +288,60 @@ export default function RolesPage() {
               text-slate-700
             "
           >
+            Module
+          </span>
+
+          <select
+            value={moduleFilter}
+            onChange={(event) => {
+              setModuleFilter(
+                event.target.value,
+              );
+
+              setPage(1);
+            }}
+            className="
+              h-10 w-full rounded-lg
+              border border-slate-300
+              bg-white px-3
+              text-sm text-slate-900
+              outline-none
+              focus:border-blue-500
+              focus:ring-2
+              focus:ring-blue-100
+            "
+          >
+            <option value="">
+              All modules
+            </option>
+
+            {modules.map(
+              (module) => (
+                <option
+                  key={module}
+                  value={module}
+                >
+                  {module}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+
+        <label className="space-y-1.5">
+          <span
+            className="
+              text-sm font-semibold
+              text-slate-700
+            "
+          >
             Status
           </span>
 
           <select
-            value={activeFilter}
+            value={statusFilter}
             onChange={(event) => {
-              setActiveFilter(
+              setStatusFilter(
                 event.target.value as (
                   "all"
                   |
@@ -295,72 +356,24 @@ export default function RolesPage() {
             className="
               h-10 w-full rounded-lg
               border border-slate-300
-              bg-white px-3 text-sm
-              text-slate-900 outline-none
+              bg-white px-3
+              text-sm text-slate-900
+              outline-none
               focus:border-blue-500
               focus:ring-2
               focus:ring-blue-100
             "
           >
             <option value="all">
-              All roles
+              All permissions
             </option>
 
             <option value="active">
-              Active roles
+              Active
             </option>
 
             <option value="inactive">
-              Inactive roles
-            </option>
-          </select>
-        </label>
-
-        <label className="space-y-1.5">
-          <span
-            className="
-              text-sm font-semibold
-              text-slate-700
-            "
-          >
-            Role type
-          </span>
-
-          <select
-            value={typeFilter}
-            onChange={(event) => {
-              setTypeFilter(
-                event.target.value as (
-                  "all"
-                  |
-                  "system"
-                  |
-                  "custom"
-                ),
-              );
-
-              setPage(1);
-            }}
-            className="
-              h-10 w-full rounded-lg
-              border border-slate-300
-              bg-white px-3 text-sm
-              text-slate-900 outline-none
-              focus:border-blue-500
-              focus:ring-2
-              focus:ring-blue-100
-            "
-          >
-            <option value="all">
-              All role types
-            </option>
-
-            <option value="system">
-              System roles
-            </option>
-
-            <option value="custom">
-              Custom roles
+              Inactive
             </option>
           </select>
         </label>
@@ -373,17 +386,17 @@ export default function RolesPage() {
           bg-white shadow-sm
         "
       >
-        {roleQuery.isPending ? (
+        {permissionQuery.isPending ? (
           <div
             className="
-              flex min-h-72 items-center
-              justify-center text-sm
-              text-slate-500
+              flex min-h-72
+              items-center justify-center
+              text-sm text-slate-500
             "
           >
-            Loading roles…
+            Loading permissions…
           </div>
-        ) : roleQuery.isError ? (
+        ) : permissionQuery.isError ? (
           <div
             className="
               flex min-h-72 flex-col
@@ -391,25 +404,30 @@ export default function RolesPage() {
               gap-3 p-6 text-center
             "
           >
-            <p className="text-sm text-red-700">
-              {roleQuery.error.message}
+            <p
+              className="
+                text-sm text-red-700
+              "
+            >
+              {permissionQuery.error.message}
             </p>
 
             <button
               type="button"
               onClick={() => {
-                void roleQuery.refetch();
+                void permissionQuery.refetch();
               }}
               className="
                 rounded-lg bg-slate-900
-                px-4 py-2 text-sm
-                font-semibold text-white
+                px-4 py-2
+                text-sm font-semibold
+                text-white
               "
             >
               Try again
             </button>
           </div>
-        ) : roles.length === 0 ? (
+        ) : permissionItems.length === 0 ? (
           <div
             className="
               flex min-h-72 flex-col
@@ -417,7 +435,7 @@ export default function RolesPage() {
               p-6 text-center
             "
           >
-            <ShieldCheck
+            <KeyRound
               size={36}
               className="text-slate-300"
             />
@@ -428,17 +446,17 @@ export default function RolesPage() {
                 text-slate-900
               "
             >
-              No roles found
+              No permissions found
             </h2>
 
             <p
               className="
-                mt-1 max-w-md text-sm
+                mt-1 text-sm
                 text-slate-500
               "
             >
               Change the search or filters
-              to view other roles.
+              to view other permissions.
             </p>
           </div>
         ) : (
@@ -452,10 +470,10 @@ export default function RolesPage() {
               <thead className="bg-slate-50">
                 <tr>
                   {[
-                    "Role",
+                    "Permission",
+                    "Code",
+                    "Module",
                     "Description",
-                    "Type",
-                    "Permissions",
                     "Status",
                   ].map(
                     (heading) => (
@@ -482,32 +500,73 @@ export default function RolesPage() {
                   divide-y divide-slate-100
                 "
               >
-                {roles.map(
-                  (role) => (
+                {permissionItems.map(
+                  (permission) => (
                     <tr
-                      key={role.id}
+                      key={permission.id}
                       className="
                         hover:bg-slate-50
                       "
                     >
                       <td
                         className="
-                          px-4 py-4 text-sm
-                          font-semibold
+                          px-4 py-4
+                          text-sm font-semibold
                           text-slate-900
                         "
                       >
-                        {role.name}
+                        {permission.name}
                       </td>
 
                       <td
                         className="
-                          max-w-md px-4 py-4
+                          whitespace-nowrap
+                          px-4 py-4
+                        "
+                      >
+                        <code
+                          className="
+                            rounded-md
+                            bg-slate-100
+                            px-2 py-1
+                            text-xs
+                            text-slate-700
+                          "
+                        >
+                          {permission.code}
+                        </code>
+                      </td>
+
+                      <td
+                        className="
+                          whitespace-nowrap
+                          px-4 py-4
+                        "
+                      >
+                        <span
+                          className="
+                            inline-flex
+                            rounded-full
+                            border
+                            border-blue-200
+                            bg-blue-50
+                            px-2.5 py-1
+                            text-xs font-semibold
+                            text-blue-700
+                          "
+                        >
+                          {permission.module}
+                        </span>
+                      </td>
+
+                      <td
+                        className="
+                          max-w-lg px-4 py-4
                           text-sm text-slate-600
                         "
                       >
                         {
-                          role.description
+                          permission.description
                           ??
                           "No description"
                         }
@@ -521,79 +580,31 @@ export default function RolesPage() {
                       >
                         <span
                           className={`
-                            inline-flex rounded-full
-                            border px-2.5 py-1
+                            inline-flex
+                            rounded-full border
+                            px-2.5 py-1
                             text-xs font-semibold
                             ${
-                              role.is_system
+                              permission.is_active
                                 ? (
-                                  "border-blue-200 "
-                                  +
-                                  "bg-blue-50 "
-                                  +
-                                  "text-blue-700"
-                                )
+                                    "border-emerald-200 "
+                                    +
+                                    "bg-emerald-50 "
+                                    +
+                                    "text-emerald-700"
+                                  )
                                 : (
-                                  "border-violet-200 "
-                                  +
-                                  "bg-violet-50 "
-                                  +
-                                  "text-violet-700"
-                                )
+                                    "border-slate-200 "
+                                    +
+                                    "bg-slate-100 "
+                                    +
+                                    "text-slate-600"
+                                  )
                             }
                           `}
                         >
                           {
-                            role.is_system
-                              ? "System"
-                              : "Custom"
-                          }
-                        </span>
-                      </td>
-
-                      <td
-                        className="
-                          whitespace-nowrap
-                          px-4 py-4 text-sm
-                          font-semibold
-                          text-slate-900
-                        "
-                      >
-                        {role.permission_count}
-                      </td>
-
-                      <td
-                        className="
-                          whitespace-nowrap
-                          px-4 py-4
-                        "
-                      >
-                        <span
-                          className={`
-                            inline-flex rounded-full
-                            border px-2.5 py-1
-                            text-xs font-semibold
-                            ${
-                              role.is_active
-                                ? (
-                                  "border-emerald-200 "
-                                  +
-                                  "bg-emerald-50 "
-                                  +
-                                  "text-emerald-700"
-                                )
-                                : (
-                                  "border-slate-200 "
-                                  +
-                                  "bg-slate-100 "
-                                  +
-                                  "text-slate-600"
-                                )
-                            }
-                          `}
-                        >
-                          {
-                            role.is_active
+                            permission.is_active
                               ? "Active"
                               : "Inactive"
                           }
@@ -617,11 +628,15 @@ export default function RolesPage() {
               sm:justify-between
             "
           >
-            <p className="text-sm text-slate-600">
+            <p
+              className="
+                text-sm text-slate-600
+              "
+            >
               Page {pagination.page} of{" "}
               {pagination.total_pages || 1}
               {" · "}
-              {pagination.total_items} roles
+              {pagination.total_items} permissions
             </p>
 
             <div className="flex gap-2">
@@ -630,7 +645,7 @@ export default function RolesPage() {
                 disabled={
                   !pagination.has_previous
                   ||
-                  roleQuery.isFetching
+                  permissionQuery.isFetching
                 }
                 onClick={() => {
                   setPage(
@@ -643,9 +658,10 @@ export default function RolesPage() {
                 }}
                 className="
                   rounded-lg border
-                  border-slate-300 bg-white
-                  px-3 py-1.5 text-sm
-                  font-semibold text-slate-700
+                  border-slate-300
+                  bg-white px-3 py-1.5
+                  text-sm font-semibold
+                  text-slate-700
                   hover:bg-slate-50
                   disabled:opacity-40
                 "
@@ -658,7 +674,7 @@ export default function RolesPage() {
                 disabled={
                   !pagination.has_next
                   ||
-                  roleQuery.isFetching
+                  permissionQuery.isFetching
                 }
                 onClick={() => {
                   setPage(
@@ -668,9 +684,10 @@ export default function RolesPage() {
                 }}
                 className="
                   rounded-lg border
-                  border-slate-300 bg-white
-                  px-3 py-1.5 text-sm
-                  font-semibold text-slate-700
+                  border-slate-300
+                  bg-white px-3 py-1.5
+                  text-sm font-semibold
+                  text-slate-700
                   hover:bg-slate-50
                   disabled:opacity-40
                 "

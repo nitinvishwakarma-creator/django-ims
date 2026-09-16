@@ -79,19 +79,45 @@ class AuthenticationAuditLog(Document):
     def _build_integrity_payload(
         self,
     ):
+        user_reference = (
+            self._data.get("user")
+        )
+
+        organization_reference = (
+            self._data.get(
+                "organization"
+            )
+        )
+
         user_id = (
             str(
-                self.user.id
+                getattr(
+                    user_reference,
+                    "id",
+                    getattr(
+                        user_reference,
+                        "pk",
+                        "",
+                    ),
+                )
             )
-            if self.user
+            if user_reference
             else ""
         )
 
         organization_id = (
             str(
-                self.organization.id
+                getattr(
+                    organization_reference,
+                    "id",
+                    getattr(
+                        organization_reference,
+                        "pk",
+                        "",
+                    ),
+                )
             )
-            if self.organization
+            if organization_reference
             else ""
         )
 

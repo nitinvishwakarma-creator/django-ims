@@ -288,6 +288,12 @@ export const navigationSections:
           permission: "permissions.read",
         },
         {
+          label: "Authentication Audit",
+          href: "/settings/audit",
+          icon: ShieldCheck,
+          permission: "accounting_audit.read",
+        },
+        {
           label: "Background Jobs",
           href: "/background-jobs",
           icon: ListChecks,

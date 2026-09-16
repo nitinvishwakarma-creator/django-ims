@@ -30,7 +30,11 @@ urlpatterns = [
         views.me_api,
         name="me",
     ),
-
+    path(
+        "authentication-audit-logs/",
+        views.authentication_audit_logs_api,
+        name="authentication_audit_logs",
+    ),
     path(
         "csrf/",
         views.csrf_api,

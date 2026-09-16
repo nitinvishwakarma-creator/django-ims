@@ -1,5 +1,5 @@
 import json
-
+from mongoengine.errors import DoesNotExist
 from django.contrib.auth import authenticate
 
 from apps.accounts.login_rate_limit_service import (
@@ -25,6 +25,10 @@ from apps.core.api.decorators import (
 )
 from apps.accounts.api.v1.serializers import (
     AccountAPISerializer,
+)
+
+from apps.accounts.authentication_audit_log_service import (
+    AuthenticationAuditLogService,
 )
 
 from apps.core.services.api_discovery_service import (
@@ -843,3 +847,214 @@ def me_api(
         )
     )
 
+@api_login_required
+def authentication_audit_logs_api(
+    request,
+):
+    # ==================================================
+    # METHOD
+    # ==================================================
+
+    if request.method != "GET":
+
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use GET to retrieve "
+                    "authentication audit logs."
+                ),
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # TRUSTED CONTEXT
+    #
+    # Organization is derived from the authenticated
+    # session. Never accept a tenant ID from the client.
+    # ==================================================
+
+    user = request.api_user
+
+    organization = (
+        request.api_organization
+    )
+
+    # ==================================================
+    # QUERY PARAMETERS
+    # ==================================================
+
+    event_type = (
+        request.GET.get(
+            "event_type"
+        )
+    )
+
+    identifier = (
+        request.GET.get(
+            "identifier"
+        )
+    )
+
+    ip_address = (
+        request.GET.get(
+            "ip_address"
+        )
+    )
+
+    limit = (
+        request.GET.get(
+            "limit",
+            "100",
+        )
+    )
+
+    # ==================================================
+    # SERVICE
+    # ==================================================
+
+    try:
+
+        logs = (
+            AuthenticationAuditLogService
+            .list_logs(
+                user=user,
+                organization=organization,
+                event_type=event_type,
+                identifier=identifier,
+                ip_address=ip_address,
+                limit=limit,
+            )
+        )
+
+    except PermissionError as exc:
+
+        return (
+            APIResponseService
+            .forbidden(
+                message=str(
+                    exc
+                ),
+                request=request,
+            )
+        )
+
+    except ValueError as exc:
+
+        return (
+            APIResponseService
+            .validation_error(
+                message="Validation failed.",
+                details={
+                    "query": [
+                        str(
+                            exc
+                        )
+                    ],
+                },
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # SERIALIZE
+    # ==================================================
+
+    serialized_logs = []
+
+    for log in logs:
+        try:
+            log_user = log.user
+        except DoesNotExist:
+            log_user = None
+
+        serialized_logs.append(
+            {
+                "id":
+                    str(
+                        log.id
+                    ),
+
+                "event_type":
+                    log.event_type,
+
+                "user": (
+                    {
+                        "id":
+                            str(
+                                log_user.id
+                            ),
+
+                        "email":
+                            log_user.email,
+                    }
+
+                    if log_user
+                    else None
+                ),
+
+                "identifier":
+                    log.identifier,
+
+                "ip_address":
+                    log.ip_address,
+
+                "created_at": (
+                    log.created_at.isoformat()
+                    if log.created_at
+                    else None
+                ),
+
+                "integrity": {
+                    "hashed":
+                        bool(
+                            log.integrity_hash
+                        ),
+
+                    "verified":
+                        log.verify_integrity(),
+                },
+            }
+        )
+
+    # ==================================================
+    # RESPONSE
+    # ==================================================
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "authentication_audit_logs":
+                    serialized_logs,
+
+                "count":
+                    len(
+                        serialized_logs
+                    ),
+
+                "query": {
+                    "event_type":
+                        event_type,
+
+                    "identifier":
+                        identifier,
+
+                    "ip_address":
+                        ip_address,
+
+                    "limit":
+                        int(
+                            limit
+                        ),
+                },
+            },
+            message=(
+                "Authentication audit logs "
+                "retrieved successfully."
+            ),
+            status=200,
+            request=request,
+        )
+    )

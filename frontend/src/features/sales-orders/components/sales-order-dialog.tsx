@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useState,
 } from "react";
 
 import {
@@ -25,18 +26,31 @@ import {
 } from "zod";
 
 import {
+  SearchCombobox,
+} from "@/components/ui/search-combobox";
+
+import {
   useCustomerList,
 } from "@/features/customers/hooks";
 
-import {
-  useProductList,
-} from "@/features/products/hooks";
+import CustomerDialog
+  from "@/features/customers/components/customer-dialog";
+
+import ProductDialog
+  from "@/features/products/components/product-dialog";
+
+import type {
+  ProductDetail,
+} from "@/features/products/types";
 
 import {
   useCreateSalesOrder,
   useSalesOrder,
   useUpdateSalesOrder,
 } from "@/features/sales-orders/hooks";
+
+import SalesOrderProductSearch
+  from "@/features/sales-orders/components/sales-order-product-search";
 
 import {
   useWarehouseList,
@@ -236,12 +250,16 @@ const inputClassName = `
 interface SalesOrderDialogProps {
   open: boolean;
   salesOrderId: string | null;
+  canCreateCustomer: boolean;
+  canCreateProduct: boolean;
   onClose: () => void;
 }
 
 export default function SalesOrderDialog({
   open,
   salesOrderId,
+  canCreateCustomer,
+  canCreateProduct,
   onClose,
 }: SalesOrderDialogProps) {
   const isEditing =
@@ -249,30 +267,75 @@ export default function SalesOrderDialog({
       salesOrderId
     );
 
+  const [
+    customerSearch,
+    setCustomerSearch,
+  ] = useState("");
+
+  const [
+    productSearches,
+    setProductSearches,
+  ] = useState<
+    Record<string, string>
+  >({});
+
+  const [
+    selectedProductLabels,
+    setSelectedProductLabels,
+  ] = useState<
+    Record<string, string>
+  >({});
+
+  const [
+    selectedCustomerLabel,
+    setSelectedCustomerLabel,
+  ] = useState("");
+
+  const [
+    customerDialogOpen,
+    setCustomerDialogOpen,
+  ] = useState(false);
+
+  const [
+    productDialogOpen,
+    setProductDialogOpen,
+  ] = useState(false);
+
+  const [
+    productCreateFieldId,
+    setProductCreateFieldId,
+  ] = useState<string | null>(
+    null,
+  );
+
   const salesOrderQuery =
     useSalesOrder(
       salesOrderId ?? "",
       open && isEditing,
     );
 
+  const normalizedCustomerSearch =
+    customerSearch.trim();
+
   const customerQuery =
-    useCustomerList({
-      page: 1,
-      page_size: 100,
-      is_active: true,
-      sort: "name",
-    });
+    useCustomerList(
+      {
+        page: 1,
+        page_size: 10,
+        search:
+          normalizedCustomerSearch.length >= 3
+            ? normalizedCustomerSearch
+            : undefined,
+        is_active: true,
+        sort: "name",
+      },
+      open
+      &&
+      normalizedCustomerSearch.length >= 3,
+    );
 
   const warehouseQuery =
     useWarehouseList({
-      page: 1,
-      page_size: 100,
-      is_active: true,
-      sort: "name",
-    });
-
-  const productQuery =
-    useProductList({
       page: 1,
       page_size: 100,
       is_active: true,
@@ -337,7 +400,7 @@ export default function SalesOrderDialog({
 
     if (!salesOrderId) {
       reset(
-        emptyValues()
+        emptyValues(),
       );
     }
   }, [
@@ -361,6 +424,19 @@ export default function SalesOrderDialog({
 
     const salesOrder =
       salesOrderQuery.data;
+
+    const customerLabel =
+      `${salesOrder.customer.code} — ${salesOrder.customer.name}`;
+
+    queueMicrotask(() => {
+      setCustomerSearch(
+        customerLabel,
+      );
+
+      setSelectedCustomerLabel(
+        customerLabel,
+      );
+    });
 
     reset({
       customer_id:
@@ -403,21 +479,100 @@ export default function SalesOrderDialog({
     salesOrderQuery.data,
   ]);
 
+  useEffect(() => {
+    if (
+      !open
+      ||
+      !salesOrderId
+      ||
+      !salesOrderQuery.data
+      ||
+      fields.length === 0
+    ) {
+      return;
+    }
+
+    const salesOrder =
+      salesOrderQuery.data;
+
+    if (
+      fields.length
+      !==
+      salesOrder.items.length
+    ) {
+      return;
+    }
+
+    const searches:
+      Record<string, string> = {};
+
+    const labels:
+      Record<string, string> = {};
+
+    fields.forEach(
+      (field, index) => {
+        const product =
+          salesOrder.items[index]
+            ?.product;
+
+        if (!product) {
+          return;
+        }
+
+        const label =
+          `${product.sku} — ${product.name}`;
+
+        searches[field.id] =
+          label;
+
+        labels[field.id] =
+          label;
+      },
+    );
+
+    queueMicrotask(() => {
+      setProductSearches(
+        searches,
+      );
+
+      setSelectedProductLabels(
+        labels,
+      );
+    });
+  }, [
+    open,
+    salesOrderId,
+    salesOrderQuery.data,
+    fields,
+  ]);
+
   const customers =
     customerQuery.data
       ?.customers
     ??
     [];
 
+  const customerOptions =
+    customers.map(
+      (customer) => ({
+        id: customer.id,
+
+        label:
+          `${customer.code} — ${customer.name}`,
+
+        description:
+          [
+            customer.phone,
+            customer.email,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+      }),
+    );
+
   const warehouses =
     warehouseQuery.data
       ?.warehouses
-    ??
-    [];
-
-  const products =
-    productQuery.data
-      ?.products
     ??
     [];
 
@@ -605,37 +760,6 @@ export default function SalesOrderDialog({
     }
   }
 
-  function handleProductChange(
-    index: number,
-    productId: string,
-  ): void {
-    setValue(
-      `items.${index}.product_id`,
-      productId,
-      {
-        shouldValidate: true,
-      },
-    );
-
-    const product =
-      products.find(
-        (candidate) =>
-          candidate.id
-          ===
-          productId,
-      );
-
-    if (product) {
-      setValue(
-        `items.${index}.unit_price`,
-        product.selling_price,
-        {
-          shouldValidate: true,
-        },
-      );
-    }
-  }
-
   if (!open) {
     return null;
   }
@@ -656,15 +780,12 @@ export default function SalesOrderDialog({
       : null;
 
   const lookupPending =
-    customerQuery.isPending
-    ||
-    warehouseQuery.isPending
-    ||
-    productQuery.isPending;
+    warehouseQuery.isPending;
 
   return (
-    <div
-      role="presentation"
+    <>
+      <div
+        role="presentation"
       className="
         fixed inset-0 z-50
         flex items-center justify-center
@@ -776,44 +897,95 @@ export default function SalesOrderDialog({
                 xl:grid-cols-4
               "
             >
-              <label className="space-y-1.5">
+              <div className="space-y-1.5">
                 <span className="text-sm font-semibold">
                   Customer
                 </span>
 
-                <select
-                  {...register("customer_id")}
-                  disabled={
-                    isPending
-                    ||
-                    lookupPending
+                <SearchCombobox
+                  value={selectedCustomerLabel}
+                  searchValue={customerSearch}
+                  options={customerOptions}
+                  placeholder="Search customer name, phone, email or code"
+                  minimumSearchLength={3}
+                  disabled={isPending}
+                  isLoading={
+                    normalizedCustomerSearch.length >= 3
+                    &&
+                    customerQuery.isFetching
                   }
-                  className={inputClassName}
-                >
-                  <option value="">
-                    Select customer
-                  </option>
+                  emptyMessage="No matching customers found."
+                  canCreate={
+                    canCreateCustomer
+                  }
+                  createLabel={
+                    `Create "${normalizedCustomerSearch}"`
+                  }
+                  onCreate={() => {
+                    setCustomerDialogOpen(true);
+                  }}
+                  onSearchChange={(value) => {
+                    setCustomerSearch(
+                      value,
+                    );
 
-                  {customers.map(
-                    (customer) => (
-                      <option
-                        key={customer.id}
-                        value={customer.id}
-                      >
-                        {customer.code}
-                        {" — "}
-                        {customer.name}
-                      </option>
-                    ),
-                  )}
-                </select>
+                    if (
+                      value
+                      !==
+                      selectedCustomerLabel
+                    ) {
+                      setSelectedCustomerLabel("");
+
+                      setValue(
+                        "customer_id",
+                        "",
+                        {
+                          shouldValidate: true,
+                        },
+                      );
+                    }
+                  }}
+                  onSelect={(option) => {
+                    setValue(
+                      "customer_id",
+                      option.id,
+                      {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      },
+                    );
+
+                    setCustomerSearch(
+                      option.label,
+                    );
+
+                    setSelectedCustomerLabel(
+                      option.label,
+                    );
+                  }}
+                  onClear={() => {
+                    setValue(
+                      "customer_id",
+                      "",
+                      {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      },
+                    );
+
+                    setCustomerSearch("");
+                    setSelectedCustomerLabel("");
+                    setProductSearches({});
+                    setSelectedProductLabels({});
+                  }}
+                />
 
                 {errors.customer_id ? (
                   <p className="text-sm text-red-600">
                     {errors.customer_id.message}
                   </p>
                 ) : null}
-              </label>
+              </div>
 
               <label className="space-y-1.5">
                 <span className="text-sm font-semibold">
@@ -1017,40 +1189,128 @@ export default function SalesOrderDialog({
                             Product
                           </span>
 
-                          <select
-                            {...register(
-                              `items.${index}.product_id`
-                            )}
-                            onChange={(event) => {
-                              handleProductChange(
-                                index,
-                                event.target.value,
+                          <SalesOrderProductSearch
+                            value={
+                              selectedProductLabels[
+                                field.id
+                              ]
+                              ??
+                              ""
+                            }
+                            searchValue={
+                              productSearches[
+                                field.id
+                              ]
+                              ??
+                              ""
+                            }
+                            disabled={isPending}
+                            canCreateProduct={
+                              canCreateProduct
+                            }
+                            onCreate={() => {
+                              setProductCreateFieldId(
+                                field.id,
+                              );
+                              setProductDialogOpen(
+                                true,
                               );
                             }}
-                            disabled={
-                              isPending
-                              ||
-                              productQuery.isPending
-                            }
-                            className={inputClassName}
-                          >
-                            <option value="">
-                              Select product
-                            </option>
+                            onSearchChange={(value) => {
+                              setProductSearches(
+                                (current) => ({
+                                  ...current,
+                                  [field.id]: value,
+                                }),
+                              );
 
-                            {products.map(
-                              (product) => (
-                                <option
-                                  key={product.id}
-                                  value={product.id}
-                                >
-                                  {product.sku}
-                                  {" — "}
-                                  {product.name}
-                                </option>
-                              ),
-                            )}
-                          </select>
+                              if (
+                                value
+                                !==
+                                selectedProductLabels[
+                                  field.id
+                                ]
+                              ) {
+                                setSelectedProductLabels(
+                                  (current) => ({
+                                    ...current,
+                                    [field.id]: "",
+                                  }),
+                                );
+
+                                setValue(
+                                  `items.${index}.product_id`,
+                                  "",
+                                  {
+                                    shouldValidate: true,
+                                    shouldDirty: true,
+                                  },
+                                );
+                              }
+                            }}
+                            onSelect={(product) => {
+                              const productLabel =
+                                `${product.sku} — ${product.name}`;
+
+                              setValue(
+                                `items.${index}.product_id`,
+                                product.id,
+                                {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                },
+                              );
+
+                              setValue(
+                                `items.${index}.unit_price`,
+                                product.selling_price,
+                                {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                },
+                              );
+
+                              setProductSearches(
+                                (current) => ({
+                                  ...current,
+                                  [field.id]:
+                                    productLabel,
+                                }),
+                              );
+
+                              setSelectedProductLabels(
+                                (current) => ({
+                                  ...current,
+                                  [field.id]:
+                                    productLabel,
+                                }),
+                              );
+                            }}
+                            onClear={() => {
+                              setValue(
+                                `items.${index}.product_id`,
+                                "",
+                                {
+                                  shouldValidate: true,
+                                  shouldDirty: true,
+                                },
+                              );
+
+                              setProductSearches(
+                                (current) => ({
+                                  ...current,
+                                  [field.id]: "",
+                                }),
+                              );
+
+                              setSelectedProductLabels(
+                                (current) => ({
+                                  ...current,
+                                  [field.id]: "",
+                                }),
+                              );
+                            }}
+                          />
 
                           {errors.items?.[index]
                             ?.product_id ? (
@@ -1306,5 +1566,104 @@ export default function SalesOrderDialog({
         )}
       </div>
     </div>
-  );
+    <CustomerDialog
+      open={customerDialogOpen}
+      customerId={null}
+      onClose={() => {
+        setCustomerDialogOpen(false);
+      }}
+      onCreated={(customer) => {
+        const customerLabel =
+          `${customer.code} — ${customer.name}`;
+
+        setValue(
+          "customer_id",
+          customer.id,
+          {
+            shouldValidate: true,
+            shouldDirty: true,
+          },
+        );
+
+        setCustomerSearch(
+          customerLabel,
+        );
+
+        setSelectedCustomerLabel(
+          customerLabel,
+        );
+
+        setCustomerDialogOpen(false);
+      }}
+    />
+    <ProductDialog
+      open={productDialogOpen}
+      productId={null}
+      onClose={() => {
+        setProductDialogOpen(false);
+        setProductCreateFieldId(null);
+      }}
+      onCreated={(product: ProductDetail) => {
+        if (!productCreateFieldId) {
+          setProductDialogOpen(false);
+          return;
+        }
+
+        const productIndex =
+          fields.findIndex(
+            (field) =>
+              field.id
+              ===
+              productCreateFieldId,
+          );
+
+        if (productIndex === -1) {
+          setProductDialogOpen(false);
+          setProductCreateFieldId(null);
+          return;
+        }
+
+        const productLabel =
+          `${product.sku} — ${product.name}`;
+
+        setValue(
+          `items.${productIndex}.product_id`,
+          product.id,
+          {
+            shouldValidate: true,
+            shouldDirty: true,
+          },
+        );
+
+        setValue(
+          `items.${productIndex}.unit_price`,
+          product.selling_price,
+          {
+            shouldValidate: true,
+            shouldDirty: true,
+          },
+        );
+
+        setProductSearches(
+          (current) => ({
+            ...current,
+            [productCreateFieldId]:
+              productLabel,
+          }),
+        );
+
+        setSelectedProductLabels(
+          (current) => ({
+            ...current,
+            [productCreateFieldId]:
+              productLabel,
+          }),
+        );
+
+        setProductDialogOpen(false);
+        setProductCreateFieldId(null);
+      }}
+    />
+  </>
+);
 }

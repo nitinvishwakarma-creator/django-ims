@@ -27,6 +27,7 @@ import type {
 export function useProductList(
   parameters:
     ProductListParameters,
+  enabled = true,
 ) {
   return useQuery({
     queryKey:
@@ -38,6 +39,8 @@ export function useProductList(
       listProducts(
         parameters,
       ),
+
+    enabled,
 
     staleTime: 15_000,
   });

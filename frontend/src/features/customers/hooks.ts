@@ -26,6 +26,7 @@ import type {
 export function useCustomerList(
   parameters:
     CustomerListParameters,
+  enabled = true,
 ) {
   return useQuery({
     queryKey:
@@ -37,6 +38,8 @@ export function useCustomerList(
       listCustomers(
         parameters,
       ),
+
+    enabled,
 
     staleTime: 15_000,
   });

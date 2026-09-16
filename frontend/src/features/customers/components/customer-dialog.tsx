@@ -26,6 +26,10 @@ import {
   useUpdateCustomer,
 } from "@/features/customers/hooks";
 
+import type {
+  CustomerDetail,
+} from "@/features/customers/types";
+
 import {
   APIRequestError,
 } from "@/lib/api/client";
@@ -174,6 +178,9 @@ interface CustomerDialogProps {
   open: boolean;
   customerId: string | null;
   onClose: () => void;
+  onCreated?: (
+    customer: CustomerDetail,
+  ) => void;
 }
 
 function firstFieldMessage(
@@ -198,6 +205,7 @@ export default function CustomerDialog({
   open,
   customerId,
   onClose,
+  onCreated,
 }: CustomerDialogProps) {
   const isEditing =
     Boolean(customerId);
@@ -413,11 +421,16 @@ export default function CustomerDialog({
             editableInput,
         });
       } else {
-        await createMutation.mutateAsync({
-          code:
-            values.code,
-          ...editableInput,
-        });
+        const createdCustomer =
+          await createMutation.mutateAsync({
+            code:
+              values.code,
+            ...editableInput,
+          });
+
+        onCreated?.(
+          createdCustomer,
+        );
       }
 
       onClose();

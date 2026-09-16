@@ -243,6 +243,18 @@ export default function SalesOrdersPage() {
       "sales_orders.create",
     );
 
+const canCreateCustomer =
+  hasPermission(
+    permissions,
+    "customers.create",
+  );
+
+const canCreateProduct =
+  hasPermission(
+    permissions,
+    "products.create",
+  );
+
   const listParameters =
     useMemo(
       () => ({
@@ -995,12 +1007,18 @@ export default function SalesOrdersPage() {
         )}
       </div>
 
-      <SalesOrderDialog
-        open={formOpen}
-        salesOrderId={
-          editingSalesOrderId
-        }
-        onClose={() => {
+        <SalesOrderDialog
+          open={formOpen}
+          salesOrderId={
+            editingSalesOrderId
+          }
+          canCreateCustomer={
+            canCreateCustomer
+          }
+          canCreateProduct={
+            canCreateProduct
+          }
+          onClose={() => {
           setFormOpen(
             false
           );

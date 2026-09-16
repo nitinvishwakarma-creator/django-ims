@@ -27,6 +27,10 @@ import {
   useUpdateProduct,
 } from "@/features/products/hooks";
 
+import type {
+  ProductDetail,
+} from "@/features/products/types";
+
 import {
   APIRequestError,
 } from "@/lib/api/client";
@@ -146,6 +150,9 @@ interface ProductDialogProps {
   open: boolean;
   productId: string | null;
   onClose: () => void;
+  onCreated?: (
+    product: ProductDetail,
+  ) => void;
 }
 
 function firstFieldMessage(
@@ -170,6 +177,7 @@ export default function ProductDialog({
   open,
   productId,
   onClose,
+  onCreated,
 }: ProductDialogProps) {
   const isEditing =
     Boolean(productId);
@@ -369,8 +377,13 @@ export default function ProductDialog({
           input,
         });
       } else {
-        await createMutation.mutateAsync(
-          input,
+        const createdProduct =
+          await createMutation.mutateAsync(
+            input,
+          );
+
+        onCreated?.(
+          createdProduct,
         );
       }
 

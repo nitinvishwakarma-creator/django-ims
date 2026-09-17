@@ -5,8 +5,11 @@ import {
   useState,
 } from "react";
 
+import Link from "next/link";
+
 import {
   useRouter,
+  useSearchParams,
 } from "next/navigation";
 
 import {
@@ -54,6 +57,12 @@ type LoginFormValues =
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const signupSucceeded =
+    searchParams.get("signup")
+    ===
+    "success";
 
   const {
     signIn,
@@ -189,6 +198,21 @@ export default function LoginForm() {
         </p>
       </div>
 
+      {signupSucceeded && (
+        <div
+          role="status"
+          className="
+            rounded-lg border border-emerald-200
+            bg-emerald-50 px-4 py-3
+            text-sm text-emerald-700
+          "
+        >
+          Organization created successfully.
+          Sign in with your administrator
+          account.
+        </div>
+      )}
+
       {serverError && (
         <div
           role="alert"
@@ -243,15 +267,32 @@ export default function LoginForm() {
       </div>
 
       <div>
-        <label
-          htmlFor="password"
+        <div
           className="
-            block text-sm font-medium
-            text-slate-700
+            flex items-center justify-between
           "
         >
-          Password
-        </label>
+          <label
+            htmlFor="password"
+            className="
+              text-sm font-medium
+              text-slate-700
+            "
+          >
+            Password
+          </label>
+
+          <Link
+            href="/forgot-password"
+            className="
+              text-sm font-semibold
+              text-blue-600
+              hover:text-blue-700
+            "
+          >
+            Forgot password?
+          </Link>
+        </div>
 
         <input
           id="password"
@@ -301,6 +342,31 @@ export default function LoginForm() {
           ? "Signing in…"
           : "Sign in"}
       </button>
+
+      <div
+        className="
+          border-t border-slate-200 pt-5
+          text-center
+        "
+      >
+        <p
+          className="
+            text-sm text-slate-600
+          "
+        >
+          New to Django IMS?{" "}
+
+          <Link
+            href="/signup"
+            className="
+              font-semibold text-blue-600
+              hover:text-blue-700
+            "
+          >
+            Create an organization
+          </Link>
+        </p>
+      </div>
     </form>
   );
 }

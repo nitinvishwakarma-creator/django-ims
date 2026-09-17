@@ -60,3 +60,55 @@ export interface LogoutAllData {
   sessions_revoked?: number;
   revoked_sessions?: number;
 }
+
+export interface SignupInput {
+  organization_name: string;
+  organization_email: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  phone?: string;
+}
+
+export interface SignupOrganization {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface SignupUser {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface SignupRole {
+  id: string;
+  name: string;
+}
+
+export interface SignupResult {
+  organization: SignupOrganization;
+  user: SignupUser;
+  role: SignupRole;
+}
+
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface ForgotPasswordResult {
+  message: string;
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  new_password: string;
+}
+
+export interface ResetPasswordResult {
+  message: string;
+  sessions_revoked: number;
+}

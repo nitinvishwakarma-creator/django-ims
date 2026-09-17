@@ -1,18 +1,29 @@
 import json
 from mongoengine.errors import DoesNotExist
 from django.contrib.auth import authenticate
-
+from apps.accounts.password_reset_timing_service import (
+    PasswordResetTimingService,
+)
 from apps.accounts.login_rate_limit_service import (
     LoginRateLimitService,
 )
 from apps.accounts.services import (
     AuthenticationService,
 )
-
+from apps.accounts.password_reset_email_service import (
+    PasswordResetEmailError,
+    PasswordResetEmailService,
+)
 from apps.core.services.api_response_service import (
     APIResponseService,
 )
-
+from django.http import (
+    HttpResponse,
+    JsonResponse,
+)
+from django.views.decorators.http import (
+    require_http_methods,
+)
 from apps.organizations.api_context_service import (
     APIOrganizationContextService,
 )
@@ -21,12 +32,28 @@ from apps.authorization.api_context_service import (
 )
 from apps.core.api.decorators import (
     api_login_required,
-
+    api_rate_limit,
+)
+from apps.accounts.password_reset_service import (
+    PasswordResetError,
+    PasswordResetService,
 )
 from apps.accounts.api.v1.serializers import (
     AccountAPISerializer,
 )
-
+from apps.accounts.organization_signup_service import (
+    OrganizationSignupError,
+    OrganizationSignupService,
+)
+from django.core.validators import (
+    validate_email,
+)
+from django.core.exceptions import (
+    ValidationError as DjangoValidationError,
+)
+from django.contrib.auth.password_validation import (
+    validate_password,
+)
 from apps.accounts.authentication_audit_log_service import (
     AuthenticationAuditLogService,
 )
@@ -1055,6 +1082,600 @@ def authentication_audit_logs_api(
                 "retrieved successfully."
             ),
             status=200,
+            request=request,
+        )
+    )
+
+@api_rate_limit(
+    scope="auth.signup",
+    limit=5,
+    window_seconds=3600,
+)
+def signup_api(
+    request,
+):
+    # ==================================================
+    # METHOD
+    # ==================================================
+
+    if request.method != "POST":
+
+        return (
+            APIResponseService
+            .method_not_allowed(
+                message=(
+                    "Use POST to create "
+                    "an organization account."
+                ),
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # CONTENT TYPE
+    # ==================================================
+
+    content_type = (
+        request.content_type
+        or
+        ""
+    ).lower()
+
+    if (
+        "application/json"
+        not in content_type
+    ):
+
+        return (
+            APIResponseService
+            .bad_request(
+                message=(
+                    "Content-Type must be "
+                    "application/json."
+                ),
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # JSON BODY
+    # ==================================================
+
+    try:
+
+        payload = json.loads(
+            request.body.decode(
+                "utf-8"
+            )
+        )
+
+    except (
+        json.JSONDecodeError,
+        UnicodeDecodeError,
+    ):
+
+        return (
+            APIResponseService
+            .bad_request(
+                message="Invalid JSON body.",
+                request=request,
+            )
+        )
+
+    if not isinstance(
+        payload,
+        dict,
+    ):
+
+        return (
+            APIResponseService
+            .validation_error(
+                message="Validation failed.",
+                details={
+                    "body": [
+                        (
+                            "JSON body must "
+                            "be an object."
+                        )
+                    ],
+                },
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # INPUT
+    # ==================================================
+
+    def clean_string(
+        field_name,
+    ):
+        value = payload.get(
+            field_name
+        )
+
+        if not isinstance(
+            value,
+            str,
+        ):
+            return ""
+
+        return value.strip()
+
+    organization_name = clean_string(
+        "organization_name"
+    )
+
+    organization_email = (
+        OrganizationSignupService
+        .normalize_email(
+            payload.get(
+                "organization_email"
+            )
+        )
+    )
+
+    first_name = clean_string(
+        "first_name"
+    )
+
+    last_name = clean_string(
+        "last_name"
+    )
+
+    user_email = (
+        OrganizationSignupService
+        .normalize_email(
+            payload.get(
+                "email"
+            )
+        )
+    )
+
+    password = payload.get(
+        "password"
+    )
+
+    phone = clean_string(
+        "phone"
+    )
+
+    # ==================================================
+    # REQUIRED FIELDS
+    # ==================================================
+
+    validation_errors = {}
+
+    if not organization_name:
+        validation_errors[
+            "organization_name"
+        ] = [
+            "Organization name is required."
+        ]
+
+    if not organization_email:
+        validation_errors[
+            "organization_email"
+        ] = [
+            "Organization email is required."
+        ]
+
+    if not first_name:
+        validation_errors[
+            "first_name"
+        ] = [
+            "First name is required."
+        ]
+
+    if not last_name:
+        validation_errors[
+            "last_name"
+        ] = [
+            "Last name is required."
+        ]
+
+    if not user_email:
+        validation_errors[
+            "email"
+        ] = [
+            "Email is required."
+        ]
+
+    if (
+        not isinstance(
+            password,
+            str,
+        )
+        or
+        not password
+    ):
+        validation_errors[
+            "password"
+        ] = [
+            "Password is required."
+        ]
+
+    # ==================================================
+    # EMAIL VALIDATION
+    # ==================================================
+
+    if organization_email:
+
+        try:
+            validate_email(
+                organization_email
+            )
+
+        except DjangoValidationError:
+            validation_errors[
+                "organization_email"
+            ] = [
+                (
+                    "Enter a valid organization "
+                    "email address."
+                )
+            ]
+
+    if user_email:
+
+        try:
+            validate_email(
+                user_email
+            )
+
+        except DjangoValidationError:
+            validation_errors[
+                "email"
+            ] = [
+                "Enter a valid email address."
+            ]
+
+    # ==================================================
+    # PASSWORD VALIDATION
+    # ==================================================
+
+    if (
+        isinstance(
+            password,
+            str,
+        )
+        and
+        password
+    ):
+
+        try:
+
+            validate_password(
+                password
+            )
+
+        except DjangoValidationError as exc:
+
+            validation_errors[
+                "password"
+            ] = list(
+                exc.messages
+            )
+
+    # ==================================================
+    # VALIDATION RESPONSE
+    # ==================================================
+
+    if validation_errors:
+
+        return (
+            APIResponseService
+            .validation_error(
+                message="Validation failed.",
+                details=validation_errors,
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # CREATE ORGANIZATION ACCOUNT
+    # ==================================================
+
+    try:
+
+        result = (
+            OrganizationSignupService
+            .create_organization_account(
+                organization_name=(
+                    organization_name
+                ),
+                organization_email=(
+                    organization_email
+                ),
+                first_name=first_name,
+                last_name=last_name,
+                user_email=user_email,
+                password=password,
+                phone=phone,
+            )
+        )
+
+    except OrganizationSignupError as exc:
+
+        return (
+            APIResponseService
+            .validation_error(
+                message=str(
+                    exc
+                ),
+                request=request,
+            )
+        )
+
+    except Exception:
+
+        return (
+            APIResponseService
+            .internal_error(
+                message=(
+                    "Unable to create "
+                    "organization account."
+                ),
+                request=request,
+            )
+        )
+
+    # ==================================================
+    # RESPONSE
+    # ==================================================
+
+    organization = result[
+        "organization"
+    ]
+
+    user = result[
+        "user"
+    ]
+
+    role = result[
+        "role"
+    ]
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "organization": {
+                    "id":
+                        str(
+                            organization.id
+                        ),
+
+                    "name":
+                        organization.name,
+
+                    "email":
+                        organization.email,
+                },
+
+                "user": {
+                    "id":
+                        str(
+                            user.id
+                        ),
+
+                    "email":
+                        user.email,
+
+                    "first_name":
+                        user.first_name,
+
+                    "last_name":
+                        user.last_name,
+                },
+
+                "role": {
+                    "id":
+                        str(
+                            role.id
+                        ),
+
+                    "name":
+                        role.name,
+                },
+            },
+            message=(
+                "Organization account "
+                "created successfully."
+            ),
+            status=201,
+            request=request,
+        )
+    )
+
+@api_rate_limit(
+    scope="auth.forgot_password",
+    limit=5,
+    window_seconds=900,
+)
+@require_http_methods(["POST"])
+def forgot_password_api(request):
+    try:
+        payload = json.loads(
+            request.body or "{}"
+        )
+    except json.JSONDecodeError:
+        return (
+            APIResponseService
+            .bad_request(
+                message="Invalid JSON body.",
+                request=request,
+            )
+        )
+
+    email = str(
+        payload.get(
+            "email",
+            "",
+        )
+    ).strip()
+
+    if not email:
+        return (
+            APIResponseService
+            .validation_error(
+                message="Validation failed.",
+                details={
+                    "email": [
+                        "Email is required."
+                    ],
+                },
+                request=request,
+            )
+        )
+
+    timing_started_at = (
+        PasswordResetTimingService.start()
+    )
+
+    # Deliberately ignore whether a matching
+    # account exists. The public response must
+    # be identical in both cases.
+    reset_result = (
+        PasswordResetService
+        .create_reset_token(
+            email=email,
+        )
+    )
+
+    if reset_result is not None:
+        try:
+            PasswordResetEmailService.send_reset_email(
+                user=reset_result["user"],
+                token=reset_result["token"],
+                expires_at=reset_result[
+                    "expires_at"
+                ],
+            )
+
+        except PasswordResetEmailError:
+            # Keep the public response generic so
+            # email delivery failures do not reveal
+            # whether an account exists.
+            pass
+
+    # Ensure valid forgot-password requests have
+    # a minimum response duration so account
+    # existence is harder to infer from timing.
+    PasswordResetTimingService.wait_for_minimum_duration(
+        started_at=timing_started_at,
+    )
+
+    return (
+        APIResponseService
+        .success(
+            data={
+                "message": (
+                    "If an account exists for that "
+                    "email address, password reset "
+                    "instructions will be sent."
+                ),
+            },
+            message=(
+                "Password reset request "
+                "processed successfully."
+            ),
+            request=request,
+        )
+    )
+
+@api_rate_limit(
+    scope="auth.reset_password",
+    limit=10,
+    window_seconds=900,
+)
+@require_http_methods(["POST"])
+def reset_password_api(request):
+    try:
+        payload = json.loads(
+            request.body or "{}"
+        )
+    except json.JSONDecodeError:
+        return (
+            APIResponseService
+            .bad_request(
+                message="Invalid JSON body.",
+                request=request,
+            )
+        )
+
+    token = str(
+        payload.get(
+            "token",
+            "",
+        )
+    ).strip()
+
+    new_password = str(
+        payload.get(
+            "new_password",
+            "",
+        )
+    )
+
+    errors = {}
+
+    if not token:
+        errors["token"] = [
+            "Reset token is required."
+        ]
+
+    if not new_password:
+        errors["new_password"] = [
+            "New password is required."
+        ]
+
+    if errors:
+        return (
+            APIResponseService
+            .validation_error(
+                message="Validation failed.",
+                details=errors,
+                request=request,
+            )
+        )
+
+    try:
+        result = (
+            PasswordResetService
+            .reset_password(
+                token=token,
+                new_password=new_password,
+            )
+        )
+
+    except PasswordResetError as error:
+        return (
+            APIResponseService
+            .bad_request(
+                message=str(error),
+                request=request,
+            )
+        )
+    return (
+        APIResponseService
+        .success(
+            data={
+                "message": (
+                    "Your password has been reset "
+                    "successfully. Please sign in "
+                    "with your new password."
+                ),
+                "sessions_revoked": (
+                    result[
+                        "sessions_revoked"
+                    ]
+                ),
+            },
+            message=(
+                "Password reset completed "
+                "successfully."
+            ),
             request=request,
         )
     )

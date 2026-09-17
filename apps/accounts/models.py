@@ -9,6 +9,7 @@ from mongoengine import (
     BooleanField,
     DateTimeField,
     ReferenceField,
+    IntField,
 )
 from apps.organizations.models import Organization
 from apps.authorization.models import Role
@@ -23,6 +24,10 @@ class User(Document):
 
     is_active = BooleanField(default=True)
 
+    password_reset_generation = IntField(
+        default=0,
+        min_value=0,
+    )
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)
 

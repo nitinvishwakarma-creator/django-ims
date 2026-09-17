@@ -6,15 +6,15 @@ import {
   Suspense,
 } from "react";
 
-import LoginForm from "@/features/auth/components/login-form";
+import {
+  ResetPasswordForm,
+} from "@/features/auth/components/reset-password-form";
 
 export const metadata: Metadata = {
-  title: "Sign in | Django IMS",
-  description:
-    "Sign in to the Django IMS workspace.",
+  title: "Reset password | Django IMS",
 };
 
-function LoginFormFallback() {
+function ResetPasswordFallback() {
   return (
     <div
       className="
@@ -28,28 +28,22 @@ function LoginFormFallback() {
           text-slate-500
         "
       >
-        Loading sign in…
+        Loading password reset…
       </p>
     </div>
   );
 }
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   return (
-    <main
-      className="
-        flex min-h-screen items-center
-        justify-center bg-slate-50
-        px-4 py-12
-      "
-    >
-      <div className="w-full max-w-md">
+    <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-6 py-12">
+      <div className="w-full">
         <Suspense
           fallback={
-            <LoginFormFallback />
+            <ResetPasswordFallback />
           }
         >
-          <LoginForm />
+          <ResetPasswordForm />
         </Suspense>
       </div>
     </main>

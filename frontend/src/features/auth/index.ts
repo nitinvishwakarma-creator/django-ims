@@ -4,6 +4,9 @@ export {
   login,
   logout,
   logoutAll,
+  forgotPassword,
+  resetPassword,
+  signup,
 } from "@/features/auth/api";
 
 export type {
@@ -12,8 +15,17 @@ export type {
   AuthenticatedUser,
   AuthenticationContext,
   AuthenticationState,
+  ForgotPasswordInput,
+  ForgotPasswordResult,
+  ResetPasswordInput,
+  ResetPasswordResult,
   LoggedOutUser,
   LoginCredentials,
   LogoutAllData,
   LogoutData,
+  SignupInput,
+  SignupOrganization,
+  SignupResult,
+  SignupRole,
+  SignupUser,
 } from "@/features/auth/types";

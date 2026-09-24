@@ -8,6 +8,7 @@ import {
   KeyRound,
   Settings,
   ShieldCheck,
+  Tags,
   Users,
 } from "lucide-react";
 
@@ -39,6 +40,15 @@ const administrationCards:
     permission:
         "organizations.update",
     icon: Building2,
+    },
+    {
+      title: "Categories",
+      description:
+        "Manage product categories used to organize your inventory and products.",
+      href: "/settings/categories",
+      permission:
+        "products.read",
+      icon: Tags,
     },
     {
       title: "Users",

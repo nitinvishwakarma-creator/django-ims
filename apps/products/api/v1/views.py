@@ -27,7 +27,10 @@ from apps.products.services.product_api_service import (
     ProductAPIService,
     ProductAPIValidationError,
 )
-
+from apps.products.services.category_api_service import (
+    CategoryAPIService,
+    CategoryAPIValidationError,
+)
 
 @api_login_required
 @api_rate_limit(
@@ -39,87 +42,366 @@ def category_collection_api(
     request,
 ):
     # ==================================================
-    # METHOD
+    # GET: LIST ACTIVE CATEGORIES
     # ==================================================
 
-    if request.method != "GET":
+    if request.method == "GET":
+
+        if not (
+            AuthorizationService
+            .has_permission(
+                request.api_user,
+                "products.read",
+            )
+        ):
+
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        categories = (
+            CategoryRepository
+            .list_active(
+                organization=(
+                    request.api_organization
+                ),
+            )
+        )
+
+        serialized_categories = [
+            (
+                CategoryAPISerializer
+                .serialize_summary(
+                    category
+                )
+            )
+            for category
+            in categories
+        ]
 
         return (
             APIResponseService
-            .method_not_allowed(
+            .success(
+                data={
+                    "categories":
+                        serialized_categories,
+                    "count":
+                        len(
+                            serialized_categories
+                        ),
+                },
                 message=(
-                    "Use GET to retrieve "
-                    "product categories."
+                    "Product categories retrieved "
+                    "successfully."
                 ),
                 request=request,
             )
         )
 
     # ==================================================
-    # AUTHORIZATION
+    # POST: CREATE CATEGORY
     # ==================================================
 
-    if not (
-        AuthorizationService
-        .has_permission(
-            request.api_user,
-            "products.read",
-        )
-    ):
+    if request.method == "POST":
+
+        if not (
+            AuthorizationService
+            .has_permission(
+                request.api_user,
+                "products.create",
+            )
+        ):
+
+            return (
+                APIResponseService
+                .forbidden(
+                    message="Permission denied.",
+                    request=request,
+                )
+            )
+
+        content_type = (
+            request.content_type
+            or
+            ""
+        ).lower()
+
+        if (
+            "application/json"
+            not in content_type
+        ):
+
+            return (
+                APIResponseService
+                .bad_request(
+                    message=(
+                        "Content-Type must be "
+                        "application/json."
+                    ),
+                    request=request,
+                )
+            )
+
+        try:
+
+            payload = json.loads(
+                request.body.decode(
+                    "utf-8"
+                )
+            )
+
+        except (
+            json.JSONDecodeError,
+            UnicodeDecodeError,
+        ):
+
+            return (
+                APIResponseService
+                .bad_request(
+                    message="Invalid JSON body.",
+                    request=request,
+                )
+            )
+
+        try:
+
+            category = (
+                CategoryAPIService
+                .create_category(
+                    organization=(
+                        request.api_organization
+                    ),
+                    payload=payload,
+                )
+            )
+
+        except CategoryAPIValidationError as exc:
+
+            return (
+                APIResponseService
+                .validation_error(
+                    message=exc.message,
+                    details=exc.details,
+                    request=request,
+                )
+            )
 
         return (
             APIResponseService
-            .forbidden(
-                message="Permission denied.",
+            .success(
+                data={
+                    "category": (
+                        CategoryAPISerializer
+                        .serialize_detail(
+                            category
+                        )
+                    ),
+                },
+                message=(
+                    "Product category created "
+                    "successfully."
+                ),
+                status=201,
                 request=request,
             )
         )
 
     # ==================================================
-    # TENANT-SCOPED QUERY
-    # ==================================================
-
-    categories = (
-        CategoryRepository
-        .list_active(
-            organization=(
-                request.api_organization
-            ),
-        )
-    )
-
-    serialized_categories = [
-        (
-            CategoryAPISerializer
-            .serialize_summary(
-                category
-            )
-        )
-        for category
-        in categories
-    ]
-
-    # ==================================================
-    # RESPONSE
+    # UNSUPPORTED METHOD
     # ==================================================
 
     return (
         APIResponseService
-        .success(
-            data={
-                "categories":
-                    serialized_categories,
-                "count":
-                    len(
-                        serialized_categories
-                    ),
-            },
+        .method_not_allowed(
             message=(
-                "Product categories retrieved "
-                "successfully."
+                "Use GET or POST for "
+                "the category collection."
             ),
             request=request,
         )
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="categories.detail",
+    limit=120,
+    window_seconds=60,
+)
+def category_detail_api(request, category_id):
+    if request.method == "GET":
+        if not AuthorizationService.has_permission(
+            request.api_user,
+            "products.read",
+        ):
+            return APIResponseService.forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+
+        try:
+            category = CategoryAPIService.get_category(
+                organization=request.api_organization,
+                category_id=category_id,
+            )
+        except LookupError:
+            return APIResponseService.not_found(
+                message="Category not found.",
+                request=request,
+            )
+
+        return APIResponseService.success(
+            data={
+                "category": CategoryAPISerializer.serialize_detail(
+                    category
+                ),
+            },
+            message="Product category retrieved successfully.",
+            request=request,
+        )
+
+    if request.method == "PATCH":
+        if not AuthorizationService.has_permission(
+            request.api_user,
+            "products.update",
+        ):
+            return APIResponseService.forbidden(
+                message="Permission denied.",
+                request=request,
+            )
+
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return APIResponseService.validation_error(
+                message="Invalid JSON body.",
+                details={
+                    "payload": ["Request body must contain valid JSON."]
+                },
+                request=request,
+            )
+
+        try:
+            category = CategoryAPIService.update_category(
+                organization=request.api_organization,
+                category_id=category_id,
+                payload=payload,
+            )
+        except CategoryAPIValidationError as exc:
+            return APIResponseService.validation_error(
+                message=exc.message,
+                details=exc.details,
+                request=request,
+            )
+        except LookupError:
+            return APIResponseService.not_found(
+                message="Category not found.",
+                request=request,
+            )
+
+        return APIResponseService.success(
+            data={
+                "category": CategoryAPISerializer.serialize_detail(
+                    category
+                ),
+            },
+            message="Product category updated successfully.",
+            request=request,
+        )
+
+    return APIResponseService.method_not_allowed(
+        message="Use GET or PATCH for a product category.",
+        request=request,
+    )
+
+@api_login_required
+@api_rate_limit(
+    scope="categories.activate",
+    limit=120,
+    window_seconds=60,
+)
+def category_activate_api(request, category_id):
+    if request.method != "POST":
+        return APIResponseService.method_not_allowed(
+            message="Use POST to activate a product category.",
+            request=request,
+        )
+
+    if not AuthorizationService.has_permission(
+        request.api_user,
+        "products.update",
+    ):
+        return APIResponseService.forbidden(
+            message="Permission denied.",
+            request=request,
+        )
+
+    try:
+        category = CategoryAPIService.activate_category(
+            organization=request.api_organization,
+            category_id=category_id,
+        )
+    except LookupError:
+        return APIResponseService.not_found(
+            message="Category not found.",
+            request=request,
+        )
+
+    return APIResponseService.success(
+        data={
+            "category": CategoryAPISerializer.serialize_detail(
+                category
+            ),
+        },
+        message="Product category activated successfully.",
+        request=request,
+    )
+
+
+@api_login_required
+@api_rate_limit(
+    scope="categories.deactivate",
+    limit=120,
+    window_seconds=60,
+)
+def category_deactivate_api(request, category_id):
+    if request.method != "POST":
+        return APIResponseService.method_not_allowed(
+            message="Use POST to deactivate a product category.",
+            request=request,
+        )
+
+    if not AuthorizationService.has_permission(
+        request.api_user,
+        "products.delete",
+    ):
+        return APIResponseService.forbidden(
+            message="Permission denied.",
+            request=request,
+        )
+
+    try:
+        category = CategoryAPIService.deactivate_category(
+            organization=request.api_organization,
+            category_id=category_id,
+        )
+    except LookupError:
+        return APIResponseService.not_found(
+            message="Category not found.",
+            request=request,
+        )
+
+    return APIResponseService.success(
+        data={
+            "category": CategoryAPISerializer.serialize_detail(
+                category
+            ),
+        },
+        message="Product category deactivated successfully.",
+        request=request,
     )
 
 @api_login_required

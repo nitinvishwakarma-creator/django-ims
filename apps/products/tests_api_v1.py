@@ -11,10 +11,13 @@ from django.test import (
     Client,
     SimpleTestCase,
 )
-
+from apps.products.services.category_api_service import (
+    CategoryAPIService,
+)
 from apps.authorization.services import (
     AuthorizationService,
 )
+from apps.products.models import Category, Product
 from apps.core.services.api_query_pipeline_service import (
     APIQueryPipelineError,
     APIQueryPipelineService,
@@ -391,19 +394,53 @@ class ProductAPIV1RegressionTestCase(
             "FORBIDDEN",
         )
 
-    def test_category_collection_rejects_post(
+    def test_category_collection_creates_category(
         self,
     ):
-        response = self.client.post(
-            self.CATEGORIES_URL,
-            data=json.dumps({}),
-            content_type="application/json",
+        payload = {
+            "name": "New Category",
+            "description": "New category description",
+        }
+
+        created_category = Category(
+            organization=self.organization,
+            name="New Category",
+            description="New category description",
+            is_active=True,
         )
 
-        self.assert_error_contract(
+        with patch.object(
+            CategoryAPIService,
+            "create_category",
+            return_value=created_category,
+        ) as create_mock:
+
+            response = self.client.post(
+                self.CATEGORIES_URL,
+                data=json.dumps(
+                    payload
+                ),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(
             response,
-            405,
-            "METHOD_NOT_ALLOWED",
+            expected_status=201,
+        )
+
+        self.assertEqual(
+            body["data"]["category"]["name"],
+            "New Category",
+        )
+
+        self.assertEqual(
+            body["data"]["category"]["description"],
+            "New category description",
+        )
+
+        create_mock.assert_called_once_with(
+            organization=self.organization,
+            payload=payload,
         )
 
     # ==================================================
@@ -1376,4 +1413,234 @@ class ProductAPIV1RegressionTestCase(
             response,
             405,
             "METHOD_NOT_ALLOWED",
+        )
+
+    def test_category_detail_returns_category(self):
+        with patch.object(
+            CategoryAPIService,
+            "get_category",
+            return_value=self.category,
+        ) as get_mock:
+
+            response = self.client.get(
+                f"{self.CATEGORIES_URL}{self.category.id}/"
+            )
+
+        body = self.assert_success_contract(response)
+
+        category = body["data"]["category"]
+
+        self.assertEqual(category["id"], str(self.category.id))
+        self.assertEqual(category["name"], "Electronics")
+        self.assertEqual(
+            category["description"],
+            "Electronic products.",
+        )
+        self.assertTrue(category["is_active"])
+
+        get_mock.assert_called_once_with(
+            organization=self.organization,
+            category_id=str(self.category.id),
+        )
+
+
+    def test_category_detail_without_permission_is_forbidden(self):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.get(
+                f"{self.CATEGORIES_URL}{self.category.id}/"
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+    def test_category_detail_updates_category(self):
+        payload = {
+            "name": "Updated Electronics",
+            "description": "Updated electronic products.",
+        }
+
+        updated_category = Category(
+            id=self.category.id,
+            organization=self.organization,
+            name="Updated Electronics",
+            description="Updated electronic products.",
+            is_active=True,
+        )
+
+        with patch.object(
+            CategoryAPIService,
+            "update_category",
+            return_value=updated_category,
+        ) as update_mock:
+
+            response = self.client.patch(
+                f"{self.CATEGORIES_URL}{self.category.id}/",
+                data=json.dumps(payload),
+                content_type="application/json",
+            )
+
+        body = self.assert_success_contract(response)
+
+        category = body["data"]["category"]
+
+        self.assertEqual(category["name"], "Updated Electronics")
+        self.assertEqual(
+            category["description"],
+            "Updated electronic products.",
+        )
+
+        update_mock.assert_called_once_with(
+            organization=self.organization,
+            category_id=str(self.category.id),
+            payload=payload,
+        )
+
+
+    def test_category_detail_update_without_permission_is_forbidden(self):
+        payload = {
+            "name": "Updated Electronics",
+        }
+
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.patch(
+                f"{self.CATEGORIES_URL}{self.category.id}/",
+                data=json.dumps(payload),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+
+    def test_category_detail_update_not_found(self):
+        payload = {
+            "name": "Updated Electronics",
+        }
+
+        with patch.object(
+            CategoryAPIService,
+            "update_category",
+            side_effect=LookupError("Category not found."),
+        ):
+            response = self.client.patch(
+                f"{self.CATEGORIES_URL}507f1f77bcf86cd799439011/",
+                data=json.dumps(payload),
+                content_type="application/json",
+            )
+
+        self.assert_error_contract(
+            response,
+            404,
+            "NOT_FOUND",
+        )
+
+    def test_category_activate(self):
+        activated_category = Category(
+            id=self.category.id,
+            organization=self.organization,
+            name="Electronics",
+            description="Electronic products.",
+            is_active=True,
+        )
+
+        with patch.object(
+            CategoryAPIService,
+            "activate_category",
+            return_value=activated_category,
+        ) as activate_mock:
+
+            response = self.client.post(
+                f"{self.CATEGORIES_URL}{self.category.id}/activate/"
+            )
+
+        body = self.assert_success_contract(response)
+
+        category = body["data"]["category"]
+
+        self.assertTrue(category["is_active"])
+        self.assertEqual(category["name"], "Electronics")
+
+        activate_mock.assert_called_once_with(
+            organization=self.organization,
+            category_id=str(self.category.id),
+        )
+
+
+    def test_category_activate_without_permission_is_forbidden(self):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.post(
+                f"{self.CATEGORIES_URL}{self.category.id}/activate/"
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
+        )
+
+
+    def test_category_deactivate(self):
+        deactivated_category = Category(
+            id=self.category.id,
+            organization=self.organization,
+            name="Electronics",
+            description="Electronic products.",
+            is_active=False,
+        )
+
+        with patch.object(
+            CategoryAPIService,
+            "deactivate_category",
+            return_value=deactivated_category,
+        ) as deactivate_mock:
+
+            response = self.client.post(
+                f"{self.CATEGORIES_URL}{self.category.id}/deactivate/"
+            )
+
+        body = self.assert_success_contract(response)
+
+        category = body["data"]["category"]
+
+        self.assertFalse(category["is_active"])
+        self.assertEqual(category["name"], "Electronics")
+
+        deactivate_mock.assert_called_once_with(
+            organization=self.organization,
+            category_id=str(self.category.id),
+        )
+
+
+    def test_category_deactivate_without_permission_is_forbidden(self):
+        with patch.object(
+            AuthorizationService,
+            "has_permission",
+            return_value=False,
+        ):
+            response = self.client.post(
+                f"{self.CATEGORIES_URL}{self.category.id}/deactivate/"
+            )
+
+        self.assert_error_contract(
+            response,
+            403,
+            "FORBIDDEN",
         )

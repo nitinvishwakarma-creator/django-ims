@@ -46,4 +46,19 @@ urlpatterns = [
         views.category_collection_api,
         name="category_collection",
     ),
+    path(
+        "categories/<str:category_id>/",
+        views.category_detail_api,
+        name="category_detail",
+    ),
+    path(
+        "categories/<str:category_id>/activate/",
+        views.category_activate_api,
+        name="category_activate",
+    ),
+    path(
+        "categories/<str:category_id>/deactivate/",
+        views.category_deactivate_api,
+        name="category_deactivate",
+    ),
 ]

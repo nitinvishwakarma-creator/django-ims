@@ -270,6 +270,12 @@ export const navigationSections:
           permission: "organizations.update",
         },
         {
+          label: "Categories",
+          href: "/settings/categories",
+          icon: Tags,
+          permission: "products.read",
+        },
+        {
           label: "Users",
           href: "/settings/users",
           icon: UserRoundCog,
